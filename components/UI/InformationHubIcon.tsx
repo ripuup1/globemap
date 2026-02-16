@@ -74,12 +74,6 @@ function InformationHubIcon({
           }}
         >
           Tap for Signals
-          <style>{`
-            @keyframes fadeOut {
-              0%, 70% { opacity: 1; }
-              100% { opacity: 0; }
-            }
-          `}</style>
         </div>
       )}
 
@@ -116,16 +110,8 @@ function InformationHubIcon({
       </button>
 
       <style>{`
-        @keyframes pulseRing {
-          0%, 100% {
-            transform: scale(1);
-            opacity: 0.3;
-          }
-          50% {
-            transform: scale(1.15);
-            opacity: 0;
-          }
-        }
+        @keyframes fadeOut { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
+        @keyframes pulseRing { 0%, 100% { transform: scale(1); opacity: 0.3; } 50% { transform: scale(1.15); opacity: 0; } }
       `}</style>
     </div>
   )

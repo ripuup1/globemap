@@ -61,7 +61,10 @@ function InteractionHintModal({ isVisible, onDismiss, onNeverShowAgain }: Intera
         className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
         onClick={(e) => e.stopPropagation()} // Prevent backdrop click from closing
       >
-        <div 
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="hint-modal-title"
           className="relative w-full max-w-md bg-[#0a0e14] rounded-lg shadow-2xl pointer-events-auto"
           style={{
             border: '1px solid rgba(255,255,255,0.1)',
@@ -92,7 +95,7 @@ function InteractionHintModal({ isVisible, onDismiss, onNeverShowAgain }: Intera
                 <SignalIcon size={20} color="#818cf8" />
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-white mb-0.5">
+                <h3 id="hint-modal-title" className="text-sm font-semibold text-white mb-0.5">
                   Quick Guide
                 </h3>
                 <p className="text-[10px] text-gray-400">

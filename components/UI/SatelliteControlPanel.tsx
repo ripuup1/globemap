@@ -349,24 +349,21 @@ function SatelliteControlPanel({
       />
 
       {isExpanded && (
-        <div 
+        <div
           ref={panelRef}
+          role="dialog"
+          aria-modal="false"
+          aria-label="Globe Settings"
           className="settings-panel fixed z-50 w-80 max-sm:w-full max-sm:bottom-0 max-sm:left-0 max-sm:right-0 max-sm:top-auto sm:top-16 sm:right-4"
-          style={{ animation: 'slideIn 0.25s ease-out' }}
+          style={{ animation: 'scp-slideIn 0.25s ease-out' }}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
           <style>{`
-            @keyframes slideIn { 
-              from { opacity: 0; transform: translateY(-10px); } 
-              to { opacity: 1; transform: translateY(0); } 
-            }
+            @keyframes scp-slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
             @media (max-width: 640px) {
-              @keyframes slideIn { 
-                from { opacity: 0; transform: translateY(100%); } 
-                to { opacity: 1; transform: translateY(0); } 
-              }
+              @keyframes scp-slideIn { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: translateY(0); } }
             }
           `}</style>
           
@@ -397,6 +394,7 @@ function SatelliteControlPanel({
                 <button
                   onClick={() => setIsExpanded(false)}
                   className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+                  aria-label="Close settings"
                 >
                   ✕
                 </button>

@@ -327,6 +327,7 @@ function EventDetailPanel({
         }}
         role="dialog"
         aria-modal="true"
+        aria-labelledby="event-detail-title"
       >
         {/* Holographic edge glow */}
         <div 
@@ -366,8 +367,8 @@ function EventDetailPanel({
                     </span>
                   )}
                 </div>
-                <h2 className="text-lg font-bold text-white leading-tight">
-                  {event.title.length > 55 ? event.title.substring(0, 55) + '...' : event.title}
+                <h2 id="event-detail-title" className="text-lg font-bold text-white leading-tight line-clamp-2">
+                  {event.title}
                 </h2>
               </div>
             </div>
@@ -407,33 +408,17 @@ function EventDetailPanel({
             }}
           >
             {/* Animated scan line effect */}
-            <div 
+            <div
               className="absolute inset-0 pointer-events-none overflow-hidden"
               style={{ opacity: 0.15 }}
             >
-              <div 
+              <div
                 className="absolute w-full h-[2px]"
                 style={{
                   background: `linear-gradient(90deg, transparent, rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.8), transparent)`,
-                  animation: 'scanLine 3s ease-in-out infinite',
+                  animation: 'edp-scanLine 3s ease-in-out infinite',
                 }}
               />
-              <style>{`
-                @keyframes scanLine {
-                  0% { top: 0; opacity: 0; }
-                  10% { opacity: 1; }
-                  90% { opacity: 1; }
-                  100% { top: 100%; opacity: 0; }
-                }
-                @keyframes pulse-ring {
-                  0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.6; }
-                  100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
-                }
-                @keyframes globe-rotate {
-                  0% { transform: rotate(0deg); }
-                  100% { transform: rotate(360deg); }
-                }
-              `}</style>
             </div>
 
             <div className="flex items-stretch">
@@ -468,7 +453,7 @@ function EventDetailPanel({
                       border: `1px solid rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.4)`,
                       borderRightColor: 'transparent',
                       borderBottomColor: 'transparent',
-                      animation: 'globe-rotate 8s linear infinite',
+                      animation: 'edp-globeRotate 8s linear infinite',
                     }}
                   />
                   {/* Location ping */}
@@ -487,7 +472,7 @@ function EventDetailPanel({
                       className="absolute inset-0 rounded-full"
                       style={{
                         border: `2px solid ${categoryColor}`,
-                        animation: 'pulse-ring 2s ease-out infinite',
+                        animation: 'edp-pulseRing 2s ease-out infinite',
                       }}
                     />
                   </div>
@@ -534,8 +519,8 @@ function EventDetailPanel({
           {/* Description - Enhanced */}
           {event.description && (
             <div className="mb-5">
-              <p className="text-gray-300 text-sm leading-relaxed">
-                {event.description.length > 280 ? event.description.substring(0, 280) + '...' : event.description}
+              <p className="text-gray-300 text-sm leading-relaxed line-clamp-6">
+                {event.description}
               </p>
             </div>
           )}
@@ -824,12 +809,9 @@ function EventDetailPanel({
                 style={{
                   background: 'rgba(255, 255, 255, 0.02)',
                   border: '1px solid rgba(255, 255, 255, 0.05)',
-                  animation: 'fadeIn 0.2s ease-out',
+                  animation: 'edp-fadeIn 0.2s ease-out',
                 }}
               >
-                <style>{`
-                  @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-                `}</style>
                 
                 {wikiLoading ? (
                   <div className="flex items-center justify-center py-4">
@@ -846,8 +828,8 @@ function EventDetailPanel({
                       />
                     )}
                     <h5 className="text-sm font-semibold text-white mb-2">{wikiData.title}</h5>
-                    <p className="text-xs text-gray-400 leading-relaxed mb-3">
-                      {wikiData.summary.length > 300 ? wikiData.summary.substring(0, 300) + '...' : wikiData.summary}
+                    <p className="text-xs text-gray-400 leading-relaxed mb-3 line-clamp-6">
+                      {wikiData.summary}
                     </p>
                     <a
                       href={wikiData.url}
@@ -882,6 +864,15 @@ function EventDetailPanel({
         </div>
       </div>
 
+      {/* Keyframes - single injection */}
+      <style>{`
+        @keyframes edp-scanLine { 0% { top: 0; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
+        @keyframes edp-pulseRing { 0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.6; } 100% { transform: translate(-50%, -50%) scale(2); opacity: 0; } }
+        @keyframes edp-globeRotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes edp-fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes edp-modalIn { from { opacity: 0; transform: scale(0.9) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+      `}</style>
+
       {/* Full Sources Modal - Futuristic */}
       {showAllSources && (
         <>
@@ -889,18 +880,18 @@ function EventDetailPanel({
             className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm"
             onClick={() => setShowAllSources(false)}
           />
-          <div 
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sources-modal-title"
             className="fixed inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-lg sm:max-h-[80vh] z-[70] rounded-2xl overflow-hidden"
             style={{
-              animation: 'modalIn 0.25s ease-out',
+              animation: 'edp-modalIn 0.25s ease-out',
               background: 'linear-gradient(180deg, rgba(8, 12, 24, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%)',
               border: `1px solid rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.2)`,
               boxShadow: `0 25px 80px rgba(0, 0, 0, 0.5), 0 0 40px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.1)`,
             }}
           >
-            <style>{`
-              @keyframes modalIn { from { opacity: 0; transform: scale(0.9) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-            `}</style>
             
             {/* Modal Header */}
             <div 
@@ -909,7 +900,7 @@ function EventDetailPanel({
             >
               <div className="flex items-center gap-3">
                 <span className="text-xl">📰</span>
-                <h3 className="text-lg font-bold text-white">All Sources</h3>
+                <h3 id="sources-modal-title" className="text-lg font-bold text-white">All Sources</h3>
                 <span 
                   className="px-2 py-0.5 rounded-full text-xs font-semibold"
                   style={{ 
