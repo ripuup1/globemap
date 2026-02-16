@@ -320,7 +320,7 @@ export async function POST(request: NextRequest) {
     ])
     
     // Collect all events
-    let allEvents: any[] = []
+    const allEvents: any[] = []
     
     for (let i = 0; i < rssResults.length; i++) {
       const feedEvents = rssResults[i]
