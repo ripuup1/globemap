@@ -87,9 +87,13 @@ async function fetchFromSupabase(
     const supabase = createServerClient()
     if (!supabase) throw new Error('Supabase not configured')
 
+    // 5s timeout for Supabase query (fail fast to RSS fallback)
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 5000)
+
     let query = (supabase as any)
       .from('events')
-      .select(SELECT_COLUMNS)
+      .select(SELECT_COLUMNS, { signal: controller.signal })
       .order('weight_score', { ascending: false })
       .order('timestamp', { ascending: false })
       .limit(limit)
@@ -98,6 +102,7 @@ async function fetchFromSupabase(
     if (country) query = query.eq('country', country.toLowerCase())
 
     const { data, error } = await query
+    clearTimeout(timeoutId)
     if (error) throw error
     if (!data || data.length === 0) throw new Error('No events in Supabase')
 
