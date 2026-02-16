@@ -94,7 +94,7 @@ interface UseEventsResult {
 
 const DEFAULT_OPTIONS: UseEventsOptions = {
   enabled: true, // Default to enabled for backward compatibility
-  refreshInterval: 0,
+  refreshInterval: 5 * 60 * 1000, // 5 minutes - auto-refresh for live news
   enableRealtime: true,
   limit: 200,
 }
@@ -341,16 +341,16 @@ export function useEvents(options: UseEventsOptions = {}): UseEventsResult {
     }
   }, [opts.enabled, opts.limit])
 
-  // ========== BACKGROUND POLLING (if enabled) ==========
+  // ========== BACKGROUND POLLING (always active for live news) ==========
   useEffect(() => {
     const refreshMs = opts.refreshInterval ?? 0
-    if (refreshMs > 0 && !opts.enableRealtime) {
+    if (refreshMs > 0) {
       const interval = setInterval(() => {
         fetchEvents({ silent: true }) // Always silent for polling
       }, refreshMs)
       return () => clearInterval(interval)
     }
-  }, [opts.refreshInterval, opts.enableRealtime, fetchEvents])
+  }, [opts.refreshInterval, fetchEvents])
 
   return {
     events,

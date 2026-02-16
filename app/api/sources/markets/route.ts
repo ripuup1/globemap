@@ -20,7 +20,7 @@ interface MarketData {
 
 const MARKET_SYMBOLS = [
   { symbol: '^GSPC', displaySymbol: 'SPX', name: 'S&P 500' },
-  { symbol: '^IXIC', displaySymbol: 'NDX', name: 'NASDAQ' },
+  { symbol: '^IXIC', displaySymbol: 'NASDAQ', name: 'NASDAQ' },
   { symbol: '^DJI', displaySymbol: 'DJI', name: 'Dow Jones' },
   { symbol: '^VIX', displaySymbol: 'VIX', name: 'VIX' },
 ]

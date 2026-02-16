@@ -60,6 +60,22 @@ function EventDetailPanel({
   const [wikiLoading, setWikiLoading] = useState(false)
   const [showWiki, setShowWiki] = useState(false)
 
+  // Swipe-to-close: swipe right to close (right-side panel)
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+  }, [])
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (!touchStartRef.current) return
+    const dx = e.changedTouches[0].clientX - touchStartRef.current.x
+    const dy = e.changedTouches[0].clientY - touchStartRef.current.y
+    touchStartRef.current = null
+    // Swipe right to close
+    if (dx > 80 && Math.abs(dy) < 60) {
+      onClose()
+    }
+  }, [onClose])
+
   // Trigger slide-in animation
   useEffect(() => {
     if (eventProp) {
@@ -86,11 +102,15 @@ function EventDetailPanel({
     return () => document.removeEventListener('keydown', handleEscape)
   }, [eventProp, onClose, showAllSources])
 
-  // Reset sources modal and wiki when event changes
+  // Reset sources modal, wiki, and scroll position when event changes
   useEffect(() => {
     setShowAllSources(false)
     setWikiData(null)
     setShowWiki(false)
+    // Reset scroll to top on new event
+    if (panelRef.current) {
+      panelRef.current.scrollTop = 0
+    }
   }, [eventProp?.id])
 
   // Fetch Wikipedia data for context
@@ -295,6 +315,8 @@ function EventDetailPanel({
       {/* Panel with futuristic slide animation - Exo 2 font */}
       <div
         ref={panelRef}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
         className={`event-detail-panel fixed right-0 top-0 h-full w-full sm:max-w-md z-50 overflow-y-auto transition-transform duration-300 ease-out ${isVisible ? 'translate-x-0' : 'translate-x-full'}`}
         style={{
           fontFamily: 'var(--font-exo2), system-ui, sans-serif',

@@ -12,7 +12,7 @@ import { NextResponse } from 'next/server'
 // Market index configuration
 const MARKET_SYMBOLS = [
   { symbol: '^GSPC', displaySymbol: 'SPX', name: 'S&P 500' },
-  { symbol: '^IXIC', displaySymbol: 'NDX', name: 'NASDAQ' },
+  { symbol: '^IXIC', displaySymbol: 'NASDAQ', name: 'NASDAQ' },
   { symbol: '^DJI', displaySymbol: 'DJI', name: 'Dow Jones' },
   { symbol: '^VIX', displaySymbol: 'VIX', name: 'VIX' },
 ]
@@ -34,40 +34,52 @@ interface MarketData {
 // Simulated fallback data (used when API unavailable)
 function getSimulatedData(): MarketData[] {
   const now = Date.now()
-  const baseNoise = Math.sin(now / 100000) * 0.5
-  
+  // Use time-varying noise so direction changes over time
+  const hourCycle = Math.sin(now / 3600000) // Changes direction every ~1.8 hours
+  const minuteCycle = Math.sin(now / 60000) * 0.3 // Short-term wobble
+  const noise = hourCycle + minuteCycle
+
+  // Randomly flip direction for each index using time-seeded pseudo-random
+  const seed = Math.floor(now / 300000) // Changes every 5 minutes
+  const directions = [
+    Math.sin(seed * 1.1) > 0 ? 1 : -1,
+    Math.sin(seed * 2.3) > 0 ? 1 : -1,
+    Math.sin(seed * 3.7) > 0 ? 1 : -1,
+    Math.sin(seed * 5.1) > 0 ? 1 : -1,
+  ]
+
   return [
-    { 
-      symbol: 'SPX', 
-      name: 'S&P 500', 
-      value: 5892.58 + baseNoise * 50, 
-      change: 42.15 + baseNoise * 10, 
-      changePercent: 0.72 + baseNoise * 0.1, 
-      history: generateHistory(5892.58, 0.02) 
+    {
+      symbol: 'SPX',
+      name: 'S&P 500',
+      value: parseFloat((5892.58 + noise * 30 * directions[0]).toFixed(2)),
+      change: parseFloat((directions[0] * (42.15 + Math.abs(noise) * 15)).toFixed(2)),
+      changePercent: parseFloat((directions[0] * (0.72 + Math.abs(noise) * 0.25)).toFixed(2)),
+      history: generateHistory(5892.58, 0.02)
     },
-    { 
-      symbol: 'NDX', 
-      name: 'NASDAQ', 
-      value: 21453.12 + baseNoise * 150, 
-      change: 124.56 + baseNoise * 30, 
-      changePercent: 0.58 + baseNoise * 0.15, 
-      history: generateHistory(21453.12, 0.025) 
+    {
+      symbol: 'NASDAQ',
+      name: 'NASDAQ',
+      value: parseFloat((21453.12 + noise * 100 * directions[1]).toFixed(2)),
+      change: parseFloat((directions[1] * (124.56 + Math.abs(noise) * 50)).toFixed(2)),
+      changePercent: parseFloat((directions[1] * (0.58 + Math.abs(noise) * 0.3)).toFixed(2)),
+      history: generateHistory(21453.12, 0.025)
     },
-    { 
-      symbol: 'DJI', 
-      name: 'Dow Jones', 
-      value: 43876.34 + baseNoise * 100, 
-      change: -42.18 + baseNoise * 20, 
-      changePercent: -0.10 + baseNoise * 0.08, 
-      history: generateHistory(43876.34, 0.015) 
+    {
+      symbol: 'DJI',
+      name: 'Dow Jones',
+      value: parseFloat((43876.34 + noise * 80 * directions[2]).toFixed(2)),
+      change: parseFloat((directions[2] * (42.18 + Math.abs(noise) * 25)).toFixed(2)),
+      changePercent: parseFloat((directions[2] * (0.10 + Math.abs(noise) * 0.15)).toFixed(2)),
+      history: generateHistory(43876.34, 0.015)
     },
-    { 
-      symbol: 'VIX', 
-      name: 'VIX', 
-      value: 14.23 + baseNoise * 0.5, 
-      change: -0.87 + baseNoise * 0.2, 
-      changePercent: -5.76 + baseNoise * 1, 
-      history: generateHistory(14.23, 0.05) 
+    {
+      symbol: 'VIX',
+      name: 'VIX',
+      value: parseFloat((14.23 + noise * 0.8 * directions[3]).toFixed(2)),
+      change: parseFloat((directions[3] * (0.87 + Math.abs(noise) * 0.4)).toFixed(2)),
+      changePercent: parseFloat((directions[3] * (5.76 + Math.abs(noise) * 2)).toFixed(2)),
+      history: generateHistory(14.23, 0.05)
     },
   ]
 }
@@ -86,59 +98,58 @@ function generateHistory(baseValue: number, volatility: number): number[] {
 }
 
 async function fetchYahooFinanceData(): Promise<MarketData[]> {
-  const results: MarketData[] = []
-  
-  for (const { symbol, displaySymbol, name } of MARKET_SYMBOLS) {
-    try {
-      // Yahoo Finance v8 API endpoint
+  // Fetch all symbols in parallel for faster response
+  const results = await Promise.allSettled(
+    MARKET_SYMBOLS.map(async ({ symbol, displaySymbol, name }) => {
       const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=5d`
-      
+
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 5000)
+
       const response = await fetch(url, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         },
-        next: { revalidate: 60 }, // Cache for 60 seconds
+        signal: controller.signal,
       })
-      
+      clearTimeout(timeoutId)
+
       if (!response.ok) {
         throw new Error(`Failed to fetch ${symbol}: ${response.status}`)
       }
-      
+
       const data = await response.json()
       const quote = data.chart?.result?.[0]
-      
+
       if (!quote) {
         throw new Error(`No data for ${symbol}`)
       }
-      
+
       const meta = quote.meta
       const closePrices = quote.indicators?.quote?.[0]?.close || []
       const validPrices = closePrices.filter((p: number | null) => p !== null)
-      
-      // Get current price and calculate change
+
       const currentPrice = meta.regularMarketPrice || validPrices[validPrices.length - 1] || 0
       const previousClose = meta.previousClose || validPrices[validPrices.length - 2] || currentPrice
       const change = currentPrice - previousClose
       const changePercent = previousClose > 0 ? (change / previousClose) * 100 : 0
-      
-      // Build history from last 7 data points
+
       const history = validPrices.slice(-7).map((p: number) => parseFloat(p.toFixed(2)))
-      
-      results.push({
+
+      return {
         symbol: displaySymbol,
         name,
         value: parseFloat(currentPrice.toFixed(2)),
         change: parseFloat(change.toFixed(2)),
         changePercent: parseFloat(changePercent.toFixed(2)),
         history: history.length >= 7 ? history : generateHistory(currentPrice, 0.02),
-      })
-    } catch (err) {
-      console.warn(`Failed to fetch ${symbol}:`, err)
-      // Continue with other symbols
-    }
-  }
-  
+      } as MarketData
+    })
+  )
+
   return results
+    .filter((r): r is PromiseFulfilledResult<MarketData> => r.status === 'fulfilled')
+    .map(r => r.value)
 }
 
 export async function GET() {
@@ -195,7 +206,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const symbols = body.symbols || ['SPX', 'NDX', 'DJI', 'VIX']
+    const symbols = body.symbols || ['SPX', 'NASDAQ', 'DJI', 'VIX']
     
     // For now, return the same GET data filtered by symbols
     const response = await GET()

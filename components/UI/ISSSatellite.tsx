@@ -167,6 +167,11 @@ function ISSSatellite({
     <div
       ref={containerRef}
       onClick={onClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }}
+      data-iss-trigger
+      role="button"
+      tabIndex={0}
+      aria-label="Open ISS Control settings panel"
       className="fixed z-40 cursor-pointer group"
       style={{
         left: '50%',
@@ -174,6 +179,7 @@ function ISSSatellite({
         transform: 'translate(-50%, -50%)',
         willChange: 'transform, opacity, left, top',
         filter: solarPanelStyles.glowFilter,
+        padding: '12px', // Expand touch target for mobile
       }}
     >
       {/* ISS Model Container */}

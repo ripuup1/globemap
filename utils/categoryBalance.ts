@@ -12,7 +12,6 @@
 
 import { Event, EventType } from '@/types/event'
 import { extractCountriesFromEvents } from './countryExtractor'
-import { fetchGoogleTrendsByCountry } from './googleTrendsByCountry'
 
 // ============================================================================
 // CATEGORY TARGETS

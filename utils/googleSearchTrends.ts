@@ -76,20 +76,3 @@ async function fetchGoogleSearchTrendsInternal(regions: string[]): Promise<Trend
     .slice(0, 50)
 }
 
-/**
- * Get trending keywords for topic detection (search-only)
- */
-export async function getTrendingKeywordsForTopics(): Promise<string[]> {
-  const trends = await fetchGoogleSearchTrends()
-  
-  // Filter for high-volume, trending-up keywords
-  const relevantKeywords = trends
-    .filter(t => 
-      t.trendDirection === 'up' && 
-      t.searchVolume24h > 50000 &&
-      t.relativeVolume > 5
-    )
-    .map(t => t.keyword.toLowerCase())
-  
-  return relevantKeywords.slice(0, 20) // Top 20 trending keywords
-}

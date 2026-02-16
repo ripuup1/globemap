@@ -40,7 +40,7 @@ interface SituationRoomProps {
 // Default market indices
 const DEFAULT_MARKET_INDICES = [
   { symbol: 'SPX', name: 'S&P 500', value: 5892.58, change: +42.15, changePercent: 0.72, history: [5840, 5855, 5870, 5860, 5875, 5890, 5892] },
-  { symbol: 'NDX', name: 'NASDAQ', value: 21453.12, change: +124.56, changePercent: 0.58, history: [21200, 21280, 21350, 21320, 21400, 21430, 21453] },
+  { symbol: 'NASDAQ', name: 'NASDAQ', value: 21453.12, change: +124.56, changePercent: 0.58, history: [21200, 21280, 21350, 21320, 21400, 21430, 21453] },
   { symbol: 'DJI', name: 'Dow Jones', value: 43876.34, change: -42.18, changePercent: -0.10, history: [43920, 43900, 43880, 43890, 43870, 43860, 43876] },
   { symbol: 'VIX', name: 'VIX', value: 14.23, change: -0.87, changePercent: -5.76, history: [15.1, 14.9, 14.7, 14.5, 14.4, 14.3, 14.23] },
 ]
@@ -72,6 +72,37 @@ function SituationRoom({
 }: SituationRoomProps) {
   const panelRef = useRef<HTMLDivElement>(null)
   const tabsRef = useRef<HTMLDivElement>(null)
+
+  // Escape key to close
+  useEffect(() => {
+    if (!isOpen) return
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [isOpen, onClose])
+
+  // Swipe-to-close: swipe down on mobile, swipe left on desktop
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+  }, [])
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (!touchStartRef.current) return
+    const dx = e.changedTouches[0].clientX - touchStartRef.current.x
+    const dy = e.changedTouches[0].clientY - touchStartRef.current.y
+    touchStartRef.current = null
+    // Mobile: swipe down to close (full-screen overlay)
+    if (dy > 80 && Math.abs(dx) < 60 && window.innerWidth < 768) {
+      onClose()
+      return
+    }
+    // Desktop: swipe left to close (left sidebar)
+    if (dx < -80 && Math.abs(dy) < 60 && window.innerWidth >= 768) {
+      onClose()
+    }
+  }, [onClose])
   
   // Topic management with session caching
   const { 
@@ -167,8 +198,13 @@ function SituationRoom({
       />
       
       {/* Main panel - CSS responsive */}
-      <div 
+      <div
         ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Situation Room"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
         className={`
           fixed z-50 flex flex-col bg-[#0a0e14]
           transition-transform duration-300 ease-out
@@ -181,6 +217,10 @@ function SituationRoom({
           ${isOpen ? 'md:translate-x-0 md:translate-y-0' : 'md:-translate-x-full md:translate-y-0'}
         `}
       >
+        {/* Mobile drag handle */}
+        <div className="md:hidden flex justify-center pt-2 pb-1">
+          <div className="w-10 h-1 rounded-full bg-white/20" />
+        </div>
         {/* Header - respects safe area for iOS notch/dynamic island */}
         <header
           className="shrink-0 px-4 py-3"
@@ -313,10 +353,7 @@ function SituationRoom({
                   </div>
                   <MarketSwitcher 
                   markets={marketIndices}
-                  onMarketChange={(market) => {
-                    // Market changed - could trigger data refresh if needed
-                    console.log('[SituationRoom] Market changed to:', market.symbol)
-                  }}
+                  onMarketChange={() => {}}
                 />
                 </div>
               )}
