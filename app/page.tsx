@@ -125,7 +125,7 @@ function WorldAlignLoader({ isVisible, progress }: WorldAlignLoaderProps) {
       })
     }
     
-    const interval = setInterval(autonomousStep, 16)
+    const interval = setInterval(autonomousStep, 50)
     return () => clearInterval(interval)
   }, [progress, isVisible, shouldRender])
   
@@ -614,7 +614,7 @@ export default function HomePage() {
         }
       })
     }
-  }, [balancedEvents])
+  }, [filteredEvents])
 
   // Navigate to next/previous pin in category browse mode
   const navigateCategoryPin = useCallback((direction: 'next' | 'prev') => {
@@ -769,14 +769,104 @@ export default function HomePage() {
     return () => window.removeEventListener('keydown', handleKeyPress)
   }, [selectedEvent, searchQuery, categoryBrowseMode, eventHistory, exitCategoryBrowseMode, navigateCategoryPin, goBackInHistory])
 
-  // Mobile detection for UI layout - reactive to resize/orientation changes
+  // Memoized highlighted event IDs for Globe (avoids new array ref each render)
+  const highlightedEventIds = useMemo(() =>
+    categoryBrowseMode?.matchingEvents.map(e => e.id) || [],
+    [categoryBrowseMode]
+  )
+
+  // Memoized callbacks for SituationRoom (avoids re-renders of heavy component)
+  const handleSituationRoomClose = useCallback(() => {
+    setIsSituationRoomOpen(false)
+    setSituationRoomCountry(null)
+    setSituationRoomClusterContext(null)
+  }, [])
+
+  const handleSituationRoomEventClick = useCallback((event: Event) => {
+    if (event.latitude && event.longitude) {
+      setFlyToTarget({ lat: event.latitude, lng: event.longitude })
+      setSelectedEvent(event)
+      setIsSituationRoomOpen(false)
+    }
+  }, [])
+
+  // Memoized callback for Globe cluster opening
+  const handleOpenClusterInSituationRoom = useCallback((context: { regionName: string; eventIds: string[]; initialCategory?: string }) => {
+    setSituationRoomClusterContext(context)
+    setIsSituationRoomOpen(true)
+  }, [])
+
+  // Memoized search suggestions (avoids recalculating inline IIFE every render)
+  const searchSuggestions = useMemo(() => {
+    if (!searchQuery || searchQuery.length < 2) return []
+    const query = searchQuery.toLowerCase()
+    const suggestions: Array<{ label: string; searchTerm: string }> = []
+
+    if (['war', 'conflict', 'fight', 'military', 'battle', 'arm'].some(t => query.includes(t))) {
+      suggestions.push({ label: 'Conflicts', searchTerm: 'armed conflict' })
+      suggestions.push({ label: 'Middle East', searchTerm: 'middle east' })
+      suggestions.push({ label: 'Ukraine', searchTerm: 'ukraine' })
+    }
+    if (['middle', 'east', 'israel', 'gaza', 'iran', 'iraq'].some(t => query.includes(t))) {
+      suggestions.push({ label: 'Middle East', searchTerm: 'middle east' })
+      suggestions.push({ label: 'Israel', searchTerm: 'israel' })
+    }
+    if (['america', 'us', 'usa', 'states', 'biden', 'trump'].some(t => query.includes(t))) {
+      suggestions.push({ label: 'United States', searchTerm: 'united states' })
+      suggestions.push({ label: 'Politics', searchTerm: 'politics' })
+    }
+    if (['latin', 'south', 'brazil', 'mexico', 'argent'].some(t => query.includes(t))) {
+      suggestions.push({ label: 'South America', searchTerm: 'south america' })
+      suggestions.push({ label: 'Mexico', searchTerm: 'mexico' })
+      suggestions.push({ label: 'Brazil', searchTerm: 'brazil' })
+    }
+    if (['china', 'asia', 'korea', 'japan', 'india'].some(t => query.includes(t))) {
+      suggestions.push({ label: 'Asia Pacific', searchTerm: 'asia' })
+      suggestions.push({ label: 'China', searchTerm: 'china' })
+    }
+    if (['sport', 'footb', 'soccer', 'basket', 'nfl', 'nba'].some(t => query.includes(t))) {
+      suggestions.push({ label: 'Sports', searchTerm: 'sports' })
+    }
+    if (['tech', 'ai', 'software', 'apple', 'google'].some(t => query.includes(t))) {
+      suggestions.push({ label: 'Technology', searchTerm: 'technology' })
+    }
+    if (['politic', 'elect', 'govern', 'vote', 'president'].some(t => query.includes(t))) {
+      suggestions.push({ label: 'Politics', searchTerm: 'politics' })
+    }
+    if (['africa', 'nigeria', 'kenya', 'egypt', 'congo'].some(t => query.includes(t))) {
+      suggestions.push({ label: 'Africa', searchTerm: 'africa' })
+    }
+    if (['canada', 'toronto', 'trudeau', 'vancouver'].some(t => query.includes(t))) {
+      suggestions.push({ label: 'Canada', searchTerm: 'canada' })
+    }
+    if (['market', 'stock', 'nasdaq', 'dow', 'economy'].some(t => query.includes(t))) {
+      suggestions.push({ label: 'Markets', searchTerm: 'business' })
+    }
+    if (['climate', 'weather', 'storm', 'flood', 'hurricane'].some(t => query.includes(t))) {
+      suggestions.push({ label: 'Climate', searchTerm: 'climate' })
+    }
+
+    return suggestions.filter((s, i, arr) =>
+      arr.findIndex(x => x.label === s.label) === i
+    ).slice(0, 4)
+  }, [searchQuery])
+
+  // Mobile detection for UI layout - debounced to avoid excess re-renders
   const [isMobile, setIsMobile] = useState(false)
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth <= 640 || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent))
-    check()
+    let timeout: NodeJS.Timeout
+    const check = () => {
+      clearTimeout(timeout)
+      timeout = setTimeout(() => {
+        setIsMobile(window.innerWidth <= 640 || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent))
+      }, 150)
+    }
+    // Initial check (immediate, not debounced)
+    setIsMobile(window.innerWidth <= 640 || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent))
     window.addEventListener('resize', check)
     window.addEventListener('orientationchange', check)
     return () => {
+      clearTimeout(timeout)
       window.removeEventListener('resize', check)
       window.removeEventListener('orientationchange', check)
     }
@@ -972,14 +1062,11 @@ export default function HomePage() {
             isSettingsPanelOpen={isSettingsPanelOpen || isSituationRoomOpen}
             isModalOpen={showInfoModal || showShortcutsHelp}
             flyToTarget={flyToTarget}
-            highlightedEventIds={categoryBrowseMode?.matchingEvents.map(e => e.id) || []}
+            highlightedEventIds={highlightedEventIds}
             isolatedEventIds={isolatedEventIds}
             theme={theme}
             showLabels={true}
-            onOpenClusterInSituationRoom={(context) => {
-              setSituationRoomClusterContext(context)
-              setIsSituationRoomOpen(true)
-            }}
+            onOpenClusterInSituationRoom={handleOpenClusterInSituationRoom}
           />
         </div>
 
@@ -1052,18 +1139,8 @@ export default function HomePage() {
         <SituationRoom
           events={situationRoomEvents}
           isOpen={isSituationRoomOpen}
-          onClose={() => {
-            setIsSituationRoomOpen(false)
-            setSituationRoomCountry(null)
-            setSituationRoomClusterContext(null)
-          }}
-          onEventClick={(event) => {
-            if (event.latitude && event.longitude) {
-              setFlyToTarget({ lat: event.latitude, lng: event.longitude })
-              setSelectedEvent(event)
-              setIsSituationRoomOpen(false)
-            }
-          }}
+          onClose={handleSituationRoomClose}
+          onEventClick={handleSituationRoomEventClick}
           selectedCountry={situationRoomCountry}
           clusterContext={situationRoomClusterContext}
         />
@@ -1238,9 +1315,9 @@ export default function HomePage() {
                 </button>
               )}
             </div>
-            {/* Smart suggestion chips - Option D implementation */}
-            {searchQuery && searchQuery.length >= 2 && (
-              <div 
+            {/* Smart suggestion chips */}
+            {searchSuggestions.length > 0 && (
+              <div
                 className="px-4 py-2 border-t border-white/5"
                 style={{ animation: 'fadeSlideIn 0.2s ease-out' }}
               >
@@ -1251,75 +1328,20 @@ export default function HomePage() {
                   }
                 `}</style>
                 <div className="flex flex-wrap gap-1.5">
-                  {(() => {
-                    const query = searchQuery.toLowerCase()
-                    const suggestions: Array<{ label: string; searchTerm: string }> = []
-                    
-                    // Region suggestions - no emojis, professional labels
-                    if (['war', 'conflict', 'fight', 'military', 'battle', 'arm'].some(t => query.includes(t))) {
-                      suggestions.push({ label: 'Conflicts', searchTerm: 'armed conflict' })
-                      suggestions.push({ label: 'Middle East', searchTerm: 'middle east' })
-                      suggestions.push({ label: 'Ukraine', searchTerm: 'ukraine' })
-                    }
-                    if (['middle', 'east', 'israel', 'gaza', 'iran', 'iraq'].some(t => query.includes(t))) {
-                      suggestions.push({ label: 'Middle East', searchTerm: 'middle east' })
-                      suggestions.push({ label: 'Israel', searchTerm: 'israel' })
-                    }
-                    if (['america', 'us', 'usa', 'states', 'biden', 'trump'].some(t => query.includes(t))) {
-                      suggestions.push({ label: 'United States', searchTerm: 'united states' })
-                      suggestions.push({ label: 'Politics', searchTerm: 'politics' })
-                    }
-                    if (['latin', 'south', 'brazil', 'mexico', 'argent'].some(t => query.includes(t))) {
-                      suggestions.push({ label: 'South America', searchTerm: 'south america' })
-                      suggestions.push({ label: 'Mexico', searchTerm: 'mexico' })
-                      suggestions.push({ label: 'Brazil', searchTerm: 'brazil' })
-                    }
-                    if (['china', 'asia', 'korea', 'japan', 'india'].some(t => query.includes(t))) {
-                      suggestions.push({ label: 'Asia Pacific', searchTerm: 'asia' })
-                      suggestions.push({ label: 'China', searchTerm: 'china' })
-                    }
-                    if (['sport', 'footb', 'soccer', 'basket', 'nfl', 'nba'].some(t => query.includes(t))) {
-                      suggestions.push({ label: 'Sports', searchTerm: 'sports' })
-                    }
-                    if (['tech', 'ai', 'software', 'apple', 'google'].some(t => query.includes(t))) {
-                      suggestions.push({ label: 'Technology', searchTerm: 'technology' })
-                    }
-                    if (['politic', 'elect', 'govern', 'vote', 'president'].some(t => query.includes(t))) {
-                      suggestions.push({ label: 'Politics', searchTerm: 'politics' })
-                    }
-                    if (['africa', 'nigeria', 'kenya', 'egypt', 'congo'].some(t => query.includes(t))) {
-                      suggestions.push({ label: 'Africa', searchTerm: 'africa' })
-                    }
-                    if (['canada', 'toronto', 'trudeau', 'vancouver'].some(t => query.includes(t))) {
-                      suggestions.push({ label: 'Canada', searchTerm: 'canada' })
-                    }
-                    if (['market', 'stock', 'nasdaq', 'dow', 'economy'].some(t => query.includes(t))) {
-                      suggestions.push({ label: 'Markets', searchTerm: 'business' })
-                    }
-                    if (['climate', 'weather', 'storm', 'flood', 'hurricane'].some(t => query.includes(t))) {
-                      suggestions.push({ label: 'Climate', searchTerm: 'climate' })
-                    }
-                    
-                    // Deduplicate and limit to 4
-                    const unique = suggestions.filter((s, i, arr) => 
-                      arr.findIndex(x => x.label === s.label) === i
-                    ).slice(0, 4)
-                    
-                    return unique.map(suggestion => (
-                      <button
-                        key={suggestion.label}
-                        onClick={() => enterCategoryBrowseMode(suggestion.searchTerm, suggestion.label, '')}
-                        className="px-2.5 py-1 rounded text-[11px] font-medium transition-all hover:bg-white/10"
-                        style={{
-                          background: 'rgba(255, 255, 255, 0.05)',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
-                          color: 'rgba(255, 255, 255, 0.7)',
-                        }}
-                      >
-                        {suggestion.label}
-                      </button>
-                    ))
-                  })()}
+                  {searchSuggestions.map(suggestion => (
+                    <button
+                      key={suggestion.label}
+                      onClick={() => enterCategoryBrowseMode(suggestion.searchTerm, suggestion.label, '')}
+                      className="px-2.5 py-1 rounded text-[11px] font-medium transition-all hover:bg-white/10"
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        color: 'rgba(255, 255, 255, 0.7)',
+                      }}
+                    >
+                      {suggestion.label}
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
