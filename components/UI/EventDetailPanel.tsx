@@ -295,7 +295,7 @@ function EventDetailPanel({
       {/* Panel with futuristic slide animation - Exo 2 font */}
       <div
         ref={panelRef}
-        className={`fixed right-0 top-0 h-full w-full sm:max-w-md z-50 overflow-y-auto transition-transform duration-300 ease-out ${isVisible ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`event-detail-panel fixed right-0 top-0 h-full w-full sm:max-w-md z-50 overflow-y-auto transition-transform duration-300 ease-out ${isVisible ? 'translate-x-0' : 'translate-x-full'}`}
         style={{
           fontFamily: 'var(--font-exo2), system-ui, sans-serif',
           background: `linear-gradient(180deg, rgba(8, 12, 24, 0.98) 0%, rgba(15, 23, 42, 0.98) 50%, rgba(20, 30, 55, 0.98) 100%)`,

@@ -16,6 +16,7 @@ import { fetchGoogleTrendsForCountries } from '@/utils/googleTrendsByCountry'
 import { extractCountriesFromEvents } from '@/utils/countryExtractor'
 import { dataCache } from '@/utils/dataCache'
 import { getCacheHeaders } from '@/lib/compression'
+import { extractAndGeocode as sharedGeocode } from '@/utils/geocoding'
 import {
   calculateCountryQuotas,
   fillCountryQuotasWithTrends,
@@ -32,8 +33,32 @@ interface CacheEntry {
   source: string
 }
 
-const CACHE_TTL_MS = 60 * 1000 // 60 seconds
+const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes (was 60s - too aggressive)
 let eventsCache: CacheEntry | null = null
+
+// Circuit breaker for Google Trends - stops calling after repeated failures
+const trendsCircuitBreaker = {
+  failures: 0,
+  lastFailure: 0,
+  maxFailures: 3,
+  cooldownMs: 10 * 60 * 1000, // 10 minute cooldown after tripping
+  isOpen(): boolean {
+    if (this.failures < this.maxFailures) return false
+    // Check if cooldown has elapsed
+    if (Date.now() - this.lastFailure > this.cooldownMs) {
+      this.failures = 0 // Reset after cooldown
+      return false
+    }
+    return true // Circuit is open, skip trends
+  },
+  recordFailure(): void {
+    this.failures++
+    this.lastFailure = Date.now()
+  },
+  recordSuccess(): void {
+    this.failures = 0
+  },
+}
 
 function getCachedEvents(): CacheEntry | null {
   if (!eventsCache) return null
@@ -173,42 +198,11 @@ async function fetchFromSupabase(
 // RSS FALLBACK (Streamlined)
 // ============================================================================
 
-const CITY_COORDS: Record<string, { lat: number; lng: number; country: string; continent: string }> = {
-  'new york': { lat: 40.7128, lng: -74.0060, country: 'usa', continent: 'north-america' },
-  'washington': { lat: 38.9072, lng: -77.0369, country: 'usa', continent: 'north-america' },
-  'london': { lat: 51.5074, lng: -0.1278, country: 'uk', continent: 'europe' },
-  'paris': { lat: 48.8566, lng: 2.3522, country: 'france', continent: 'europe' },
-  'berlin': { lat: 52.5200, lng: 13.4050, country: 'germany', continent: 'europe' },
-  'tokyo': { lat: 35.6762, lng: 139.6503, country: 'japan', continent: 'asia' },
-  'beijing': { lat: 39.9042, lng: 116.4074, country: 'china', continent: 'asia' },
-  'moscow': { lat: 55.7558, lng: 37.6173, country: 'russia', continent: 'europe' },
-  'kyiv': { lat: 50.4501, lng: 30.5234, country: 'ukraine', continent: 'europe' },
-  'gaza': { lat: 31.3547, lng: 34.3088, country: 'palestine', continent: 'asia' },
-  'jerusalem': { lat: 31.7683, lng: 35.2137, country: 'israel', continent: 'asia' },
-  'cairo': { lat: 30.0444, lng: 31.2357, country: 'egypt', continent: 'africa' },
-  'sydney': { lat: -33.8688, lng: 151.2093, country: 'australia', continent: 'oceania' },
-}
-
-const COUNTRY_COORDS: Record<string, { lat: number; lng: number; continent: string }> = {
-  'usa': { lat: 39.8283, lng: -98.5795, continent: 'north-america' },
-  'united states': { lat: 39.8283, lng: -98.5795, continent: 'north-america' },
-  'uk': { lat: 55.3781, lng: -3.4360, continent: 'europe' },
-  'china': { lat: 35.8617, lng: 104.1954, continent: 'asia' },
-  'russia': { lat: 61.5240, lng: 105.3188, continent: 'europe' },
-  'ukraine': { lat: 48.3794, lng: 31.1656, continent: 'europe' },
-  'israel': { lat: 31.0461, lng: 34.8516, continent: 'asia' },
-  'palestine': { lat: 31.9522, lng: 35.2332, continent: 'asia' },
-}
-
+// Geocoding is imported from shared @/utils/geocoding module
 function extractAndGeocode(text: string) {
-  const lowerText = text.toLowerCase()
-  for (const [city, coords] of Object.entries(CITY_COORDS)) {
-    if (lowerText.includes(city)) return { ...coords, location: city }
-  }
-  for (const [country, coords] of Object.entries(COUNTRY_COORDS)) {
-    if (lowerText.includes(country)) return { ...coords, location: country, country }
-  }
-  return null
+  const result = sharedGeocode(text)
+  if (!result) return null
+  return { lat: result.lat, lng: result.lng, location: result.location, country: result.country, continent: result.continent }
 }
 
 function detectCategory(title: string): EventType {
@@ -271,59 +265,57 @@ async function fetchRSSFallback(): Promise<{ events: Event[], fromSupabase: bool
   const googleNewsEvents = googleNewsResults.flat()
   console.log(`[Events API] Google News events fetched: ${googleNewsEvents.length}`)
   
-  // Fetch Google Trends for all countries to ensure comprehensive marker coverage
-  // This helps enforce markers for every area based on search trends
+  // Fetch Google Trends for countries - with circuit breaker to avoid quota exhaustion
   let googleTrendsEvents: Event[] = []
-  try {
-    // Get countries from existing events to identify underrepresented ones
-    const allCountries = extractCountriesFromEvents([...googleNewsEvents])
-    // Increased to 20 countries for better global coverage
-    const countryNames = allCountries.map(c => c.label).slice(0, 20)
-    
-    // Fetch trends for these countries
-    const trendsMap = await fetchGoogleTrendsForCountries(countryNames)
-    
-    // Convert trending topics to events (simplified - would need full geocoding)
-    for (const [country, topics] of trendsMap.entries()) {
-      // Increased to 3-4 events per country from trends for better coverage
-      for (const topic of topics.slice(0, 4)) {
-        // Simple geocoding based on country (would need proper geocoding API)
-        const countryCoords: Record<string, { lat: number; lng: number }> = {
-          'United States': { lat: 39.8283, lng: -98.5795 },
-          'Australia': { lat: -25.2744, lng: 133.7751 },
-          'South Africa': { lat: -30.5595, lng: 22.9375 },
-          'Nigeria': { lat: 9.0820, lng: 8.6753 },
-          'Kenya': { lat: -0.0236, lng: 37.9062 },
-          // Add more as needed
+  if (trendsCircuitBreaker.isOpen()) {
+    console.log('[Events API] Google Trends circuit breaker OPEN - skipping (cooldown active)')
+  } else {
+    try {
+      const allCountries = extractCountriesFromEvents([...googleNewsEvents])
+      const countryNames = allCountries.map(c => c.label).slice(0, 20)
+
+      const trendsMap = await fetchGoogleTrendsForCountries(countryNames)
+
+      for (const [country, topics] of trendsMap.entries()) {
+        for (const topic of topics.slice(0, 4)) {
+          const countryCoords: Record<string, { lat: number; lng: number }> = {
+            'United States': { lat: 39.8283, lng: -98.5795 },
+            'Australia': { lat: -25.2744, lng: 133.7751 },
+            'South Africa': { lat: -30.5595, lng: 22.9375 },
+            'Nigeria': { lat: 9.0820, lng: 8.6753 },
+            'Kenya': { lat: -0.0236, lng: 37.9062 },
+          }
+
+          const coords = countryCoords[country] || { lat: 0, lng: 0 }
+          if (coords.lat === 0 && coords.lng === 0) continue
+
+          googleTrendsEvents.push({
+            id: `google-trends-${country}-${topic.id}-${Date.now()}`,
+            title: `${topic.name} - Trending in ${country}`,
+            description: `Trending topic in ${country} with ${topic.eventCount} related events`,
+            type: 'other' as EventType,
+            severity: 4 as Event['severity'],
+            latitude: coords.lat,
+            longitude: coords.lng,
+            timestamp: Date.now(),
+            source: 'Google Trends',
+            metadata: {
+              country: country.toLowerCase(),
+              sourceName: 'Google Trends',
+              sourceTier: 2,
+              sourceTrustWeight: 0.9,
+            },
+            articles: [],
+            articleCount: topic.eventCount,
+            isOngoing: false,
+          })
         }
-        
-        const coords = countryCoords[country] || { lat: 0, lng: 0 }
-        if (coords.lat === 0 && coords.lng === 0) continue // Skip if no coordinates
-        
-        googleTrendsEvents.push({
-          id: `google-trends-${country}-${topic.id}-${Date.now()}`,
-          title: `${topic.name} - Trending in ${country}`,
-          description: `Trending topic in ${country} with ${topic.eventCount} related events`,
-          type: 'other' as EventType, // Trending topics use 'other' type
-          severity: 4 as Event['severity'], // Moderate severity for trends
-          latitude: coords.lat,
-          longitude: coords.lng,
-          timestamp: Date.now(),
-          source: 'Google Trends',
-          metadata: {
-            country: country.toLowerCase(),
-            sourceName: 'Google Trends',
-            sourceTier: 2,
-            sourceTrustWeight: 0.9,
-          },
-          articles: [],
-          articleCount: topic.eventCount,
-          isOngoing: false,
-        })
       }
+      trendsCircuitBreaker.recordSuccess()
+    } catch (error) {
+      trendsCircuitBreaker.recordFailure()
+      console.warn(`[Events API] Google Trends fetch failed (${trendsCircuitBreaker.failures}/${trendsCircuitBreaker.maxFailures} before circuit break):`, error)
     }
-  } catch (error) {
-    console.warn('[Events API] Google Trends fetch failed:', error)
   }
   
   const results = await Promise.all(RSS_FEEDS.map(async feed => {
@@ -378,20 +370,22 @@ async function fetchRSSFallback(): Promise<{ events: Event[], fromSupabase: bool
   // Combine: conflicts + RSS feeds + Google News + Google Trends
   let combined = [...conflicts, ...allEvents, ...googleNewsEvents, ...googleTrendsEvents]
   
-  // Fill country quotas using Google Trends (highest searched/viewed per country)
-  try {
-    const countriesWithQuotas = getCountriesWithQuotas()
-    const countryQuotas = await calculateCountryQuotas(countriesWithQuotas)
-    const quotaFilledEvents = await fillCountryQuotasWithTrends(countryQuotas, combined)
-    
-    // Add quota-filled events (deduplicate by ID)
-    const existingIds = new Set(combined.map(e => e.id))
-    const newQuotaEvents = quotaFilledEvents.filter(e => !existingIds.has(e.id))
-    combined.push(...newQuotaEvents)
-    
-    console.log(`[Events API] Added ${newQuotaEvents.length} events from country trend quotas`)
-  } catch (error) {
-    console.warn('[Events API] Country quota filling failed:', error)
+  // Fill country quotas using Google Trends (shares circuit breaker)
+  if (!trendsCircuitBreaker.isOpen()) {
+    try {
+      const countriesWithQuotas = getCountriesWithQuotas()
+      const countryQuotas = await calculateCountryQuotas(countriesWithQuotas)
+      const quotaFilledEvents = await fillCountryQuotasWithTrends(countryQuotas, combined)
+
+      const existingIds = new Set(combined.map(e => e.id))
+      const newQuotaEvents = quotaFilledEvents.filter(e => !existingIds.has(e.id))
+      combined.push(...newQuotaEvents)
+
+      console.log(`[Events API] Added ${newQuotaEvents.length} events from country trend quotas`)
+    } catch (error) {
+      trendsCircuitBreaker.recordFailure()
+      console.warn('[Events API] Country quota filling failed:', error)
+    }
   }
   
   // Don't slice - return all events for maximum marker coverage

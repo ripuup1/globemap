@@ -181,10 +181,13 @@ function SituationRoom({
           ${isOpen ? 'md:translate-x-0 md:translate-y-0' : 'md:-translate-x-full md:translate-y-0'}
         `}
       >
-        {/* Header */}
-        <header 
+        {/* Header - respects safe area for iOS notch/dynamic island */}
+        <header
           className="shrink-0 px-4 py-3"
-          style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+          style={{
+            paddingTop: 'max(12px, env(safe-area-inset-top, 12px))',
+            borderBottom: '1px solid rgba(255,255,255,0.06)',
+          }}
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -333,10 +336,11 @@ function SituationRoom({
           )}
         </div>
 
-        {/* Footer */}
-        <footer 
+        {/* Footer - respects safe area for iOS home indicator */}
+        <footer
           className="shrink-0 px-4 py-2 flex items-center justify-between"
-          style={{ 
+          style={{
+            paddingBottom: 'max(8px, env(safe-area-inset-bottom, 8px))',
             borderTop: '1px solid rgba(255,255,255,0.06)',
             background: 'rgba(0,0,0,0.2)',
           }}

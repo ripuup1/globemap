@@ -45,9 +45,9 @@ function InformationHubIcon({
     return () => clearTimeout(timer)
   }, [])
 
-  const positionClasses = position === 'top-left' 
-    ? 'top-4 left-4' 
-    : 'top-4 right-4'
+  const positionClasses = position === 'top-left'
+    ? 'left-4'
+    : 'right-4'
   
   // Adjust hint position for top-right
   const hintPosition = position === 'top-right'
@@ -55,7 +55,10 @@ function InformationHubIcon({
     : { top: '-8px', left: '50%', transform: 'translateX(-50%)' }
 
   return (
-    <div className={`fixed ${positionClasses} z-40`}>
+    <div
+      className={`fixed ${positionClasses} z-40`}
+      style={{ top: 'max(16px, env(safe-area-inset-top, 16px))' }}
+    >
       {/* Hint tooltip - shows initially, then fades */}
       {showHint && (
         <div

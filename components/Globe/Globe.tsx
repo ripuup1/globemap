@@ -198,9 +198,11 @@ function GlobeComponent({
   const remainingMarkersRef = useRef<GlobeMarker[]>([])
   const waveIndexRef = useRef(0)
   
-  // Other state
+  // Camera state - uses refs during motion to avoid re-renders, commits to state on motion end
   const [currentAltitude, setCurrentAltitude] = useState(CONFIG.DEFAULT_ALTITUDE)
   const [cameraCenter, setCameraCenter] = useState<{ lat: number; lng: number }>({ lat: 20, lng: 0 })
+  const pendingAltitudeRef = useRef(CONFIG.DEFAULT_ALTITUDE)
+  const pendingCameraCenterRef = useRef<{ lat: number; lng: number }>({ lat: 20, lng: 0 })
   const [countriesGeoJson, setCountriesGeoJson] = useState<any[]>([])
   const [openCluster, setOpenCluster] = useState<{ events: Event[], position: { lat: number, lng: number }, regionName: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -235,7 +237,8 @@ function GlobeComponent({
         filtered = filtered.filter(e => filters.eventTypes.includes(e.type))
       }
       if (filters.severity !== 'all' && typeof filters.severity === 'number') {
-        filtered = filtered.filter(e => e.severity >= filters.severity)
+        const minSeverity = filters.severity
+        filtered = filtered.filter(e => e.severity >= minSeverity)
       }
       // Sort by weight/severity
       filtered.sort((a, b) => {
@@ -424,25 +427,23 @@ function GlobeComponent({
   const handleZoom = useCallback((pov: { lat: number; lng: number; altitude: number }) => {
     // Mark globe as moving
     setIsGlobeMoving(true)
-    
-    // Update camera center for progressive loading
-    setCameraCenter({ lat: pov.lat, lng: pov.lng })
-    
-    // Clear existing timeout
+
+    // Store in refs during motion (avoids re-renders on every frame)
+    const clampedAlt = Math.max(CONFIG.MIN_ALTITUDE, Math.min(CONFIG.MAX_ALTITUDE, pov.altitude))
+    pendingAltitudeRef.current = clampedAlt
+    pendingCameraCenterRef.current = { lat: pov.lat, lng: pov.lng }
+
+    // Clear existing timeouts
     if (motionTimeoutRef.current) clearTimeout(motionTimeoutRef.current)
     if (zoomTimeoutRef.current) clearTimeout(zoomTimeoutRef.current)
-    
-    // Update altitude immediately for smooth zoom
-    const clampedAlt = Math.max(CONFIG.MIN_ALTITUDE, Math.min(CONFIG.MAX_ALTITUDE, pov.altitude))
-    setCurrentAltitude(clampedAlt)
-    
-    // Debounce the motion end detection
-    // When isGlobeMoving becomes false, the clustering effect will re-run
-    // and process any pending events from the GeoClusterManager
+
+    // Debounce: when motion ends, commit refs to state (triggers one re-cluster)
     motionTimeoutRef.current = setTimeout(() => {
+      setCurrentAltitude(pendingAltitudeRef.current)
+      setCameraCenter(pendingCameraCenterRef.current)
       setIsGlobeMoving(false)
-    }, isMobile ? 200 : 100) // Longer debounce on mobile
-    
+    }, isMobile ? 200 : 100)
+
     // Debounce zoom level callback
     zoomTimeoutRef.current = setTimeout(() => {
       const zoomLevel = 1 - (clampedAlt - CONFIG.MIN_ALTITUDE) / (CONFIG.MAX_ALTITUDE - CONFIG.MIN_ALTITUDE)

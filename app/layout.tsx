@@ -32,6 +32,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   userScalable: true,
+  viewportFit: 'cover', // Required for env(safe-area-inset-*) to work on iOS
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#f0f9ff' },
     { media: '(prefers-color-scheme: dark)', color: '#0f172a' },

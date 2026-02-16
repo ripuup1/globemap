@@ -32,69 +32,7 @@ import { isCapitalContextEvent } from '@/data/capitals'
 import { balanceCategories } from '@/utils/categoryBalance'
 import { extractCountriesFromEvents } from '@/utils/countryExtractor'
 import { calculateDistance } from '@/utils/geo'
-
-// Comprehensive search synonyms for intelligent regional matching
-const SEARCH_SYNONYMS: Record<string, string[]> = {
-  // United States - extensive coverage
-  'united states': ['usa', 'us', 'america', 'american', 'u.s.', 'u.s.a', 'states', 'washington', 'new york', 'california', 'texas', 'florida', 'chicago', 'los angeles', 'biden', 'trump', 'white house', 'congress', 'pentagon'],
-  'usa': ['united states', 'america', 'american', 'u.s.'],
-  'america': ['usa', 'united states', 'american', 'u.s.'],
-  
-  // Middle East - comprehensive
-  'middle east': ['mena', 'mideast', 'israel', 'palestine', 'gaza', 'iran', 'iraq', 'saudi arabia', 'syria', 'lebanon', 'jordan', 'yemen', 'uae', 'dubai', 'qatar', 'kuwait', 'bahrain', 'oman', 'persian gulf', 'levant', 'arabian'],
-  'israel': ['israeli', 'tel aviv', 'jerusalem', 'gaza', 'palestine', 'hamas', 'netanyahu'],
-  'palestine': ['palestinian', 'gaza', 'west bank', 'hamas'],
-  
-  // Europe
-  'europe': ['european', 'eu', 'uk', 'france', 'germany', 'italy', 'spain', 'poland', 'ukraine', 'russia', 'nato', 'brussels'],
-  'uk': ['united kingdom', 'britain', 'british', 'england', 'london', 'scotland', 'wales'],
-  
-  // Asia
-  'asia': ['asian', 'china', 'japan', 'korea', 'india', 'indonesia', 'vietnam', 'thailand', 'philippines', 'malaysia', 'singapore'],
-  'china': ['chinese', 'beijing', 'shanghai', 'hong kong', 'xi jinping', 'ccp', 'taiwan'],
-  'korea': ['korean', 'south korea', 'north korea', 'seoul', 'pyongyang', 'k-pop'],
-  
-  // Americas
-  'mexico': ['mexican', 'mexico city', 'guadalajara', 'tijuana', 'cartel', 'border'],
-  'canada': ['canadian', 'toronto', 'vancouver', 'montreal', 'ottawa', 'trudeau', 'quebec'],
-  'south america': ['latin america', 'brazil', 'argentina', 'colombia', 'chile', 'peru', 'venezuela', 'ecuador', 'bolivia'],
-  'brazil': ['brazilian', 'sao paulo', 'rio', 'brasilia', 'lula'],
-  'argentina': ['argentine', 'buenos aires', 'milei'],
-  
-  // Africa
-  'africa': ['african', 'nigeria', 'egypt', 'south africa', 'kenya', 'ethiopia', 'ghana', 'morocco', 'sahel', 'sahara'],
-  
-  // Topics
-  'war': ['conflict', 'military', 'armed', 'battle', 'fighting', 'troops', 'combat', 'invasion'],
-  'sports': ['football', 'soccer', 'basketball', 'baseball', 'nfl', 'nba', 'mlb', 'olympics', 'world cup', 'championship'],
-  'technology': ['tech', 'ai', 'artificial intelligence', 'software', 'startup', 'silicon valley', 'apple', 'google', 'microsoft'],
-  'politics': ['political', 'election', 'government', 'president', 'prime minister', 'parliament', 'congress', 'vote'],
-  'economy': ['economic', 'financial', 'market', 'stock', 'trade', 'gdp', 'inflation', 'recession'],
-}
-
-// Country filter keywords for accurate matching
-const COUNTRY_KEYWORDS: Record<string, string[]> = {
-  'usa': ['usa', 'united states', 'america'],
-  'uk': ['uk', 'united kingdom', 'britain'],
-  'canada': ['canada', 'canadian'],
-  'australia': ['australia', 'australian'],
-  'germany': ['germany', 'german'],
-  'france': ['france', 'french'],
-  'japan': ['japan', 'japanese'],
-  'china': ['china', 'chinese'],
-  'india': ['india', 'indian'],
-  'brazil': ['brazil', 'brazilian'],
-  'mexico': ['mexico', 'mexican'],
-  'south africa': ['south africa'],
-  'nigeria': ['nigeria', 'nigerian'],
-  'kenya': ['kenya', 'kenyan'],
-  'egypt': ['egypt', 'egyptian'],
-  'ukraine': ['ukraine', 'ukrainian'],
-  'russia': ['russia', 'russian'],
-  'israel': ['israel', 'israeli', 'gaza', 'palestine'],
-  'south korea': ['south korea', 'korean', 'seoul'],
-  'indonesia': ['indonesia', 'indonesian', 'jakarta'],
-}
+import { SEARCH_SYNONYMS } from '@/utils/searchSynonyms'
 
 // ============================================================================
 // WORLD ALIGN LOADER
@@ -396,18 +334,10 @@ export default function HomePage() {
     fetch('/api/views', { method: 'POST' }).catch(() => {})
   }, [])
 
-  // Interaction hint modal - check localStorage and show on first visit
+  // Load persisted theme on mount (prevents flash when ThemeToggle reads localStorage)
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const neverShowHint = localStorage.getItem('neverShowInteractionHint')
-      if (!neverShowHint) {
-        // Show hint on first visit after a brief delay (2 seconds)
-        const timer = setTimeout(() => {
-          setShowInteractionHint(true)
-        }, 2000)
-        return () => clearTimeout(timer)
-      }
-    }
+    const stored = localStorage.getItem('voxtera-theme') as ThemeMode | null
+    if (stored) setTheme(stored)
   }, [])
 
   // Memoized event filtering for performance - includes country and distance filters
@@ -844,25 +774,17 @@ export default function HomePage() {
     return () => window.removeEventListener('keydown', handleKeyPress)
   }, [selectedEvent, searchQuery, categoryBrowseMode, eventHistory, exitCategoryBrowseMode, navigateCategoryPin, goBackInHistory])
 
-  // Fun facts for loading screen
-  const FUN_FACTS = [
-    "A group of flamingos is called a 'flamboyance'.",
-    "Honey never spoils—3000-year-old honey was found still edible.",
-    "Octopuses have three hearts and blue blood.",
-    "The shortest war lasted 38 minutes (Britain vs Zanzibar).",
-    "Scotland's national animal is the unicorn.",
-    "A day on Venus is longer than a year on Venus.",
-    "Dolphins sleep with one eye open.",
-    "The moon has moonquakes.",
-  ]
-  
-  // Random fact (stable)
-  const [funFact] = useState(() => FUN_FACTS[Math.floor(Math.random() * FUN_FACTS.length)])
-  
-  // Mobile detection for UI layout (NOT for loading timing - that's handled separately)
+  // Mobile detection for UI layout - reactive to resize/orientation changes
   const [isMobile, setIsMobile] = useState(false)
   useEffect(() => {
-    setIsMobile(window.innerWidth <= 640 || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent))
+    const check = () => setIsMobile(window.innerWidth <= 640 || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent))
+    check()
+    window.addEventListener('resize', check)
+    window.addEventListener('orientationchange', check)
+    return () => {
+      window.removeEventListener('resize', check)
+      window.removeEventListener('orientationchange', check)
+    }
   }, [])
   
   // ========== PHASE 8: Hybrid Waterfall Loading System ==========
@@ -1255,8 +1177,10 @@ export default function HomePage() {
           className={`fixed ${categoryBrowseMode ? 'bottom-36' : 'bottom-20'} left-1/2 -translate-x-1/2 z-30 w-full max-w-lg px-4 transition-all duration-300`}
           style={{ fontFamily: 'var(--font-exo2), system-ui, sans-serif' }}
         >
-          <div 
+          <div
             className="relative group"
+            role="search"
+            aria-label="Search events, regions, and categories"
             style={{
               background: 'linear-gradient(135deg, rgba(17, 24, 39, 0.92) 0%, rgba(30, 41, 59, 0.92) 100%)',
               backdropFilter: 'blur(20px)',
@@ -1291,6 +1215,7 @@ export default function HomePage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search events, regions, categories..."
+                aria-label="Search events, regions, and categories"
                 className="flex-1 bg-transparent text-white text-sm placeholder-gray-500 focus:outline-none tracking-wide"
                 autoComplete="off"
                 style={{ caretColor: '#818cf8' }}
@@ -1427,9 +1352,10 @@ export default function HomePage() {
         </div>
 
         {/* Bottom Stats Bar */}
-        <div 
-          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 px-4 py-2 rounded-full text-xs"
+        <div
+          className="fixed left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 px-4 py-2 rounded-full text-xs"
           style={{
+            bottom: 'max(16px, env(safe-area-inset-bottom, 16px))',
             background: 'rgba(17, 24, 39, 0.85)',
             backdropFilter: 'blur(12px)',
             border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -1465,9 +1391,12 @@ export default function HomePage() {
         </div>
 
         {/* Creation Credit Footer with Info Button */}
-        <div 
-          className="fixed bottom-4 right-4 z-20 flex items-center gap-2"
-          style={{ fontFamily: 'var(--font-exo2), system-ui, sans-serif' }}
+        <div
+          className="fixed right-4 z-20 flex items-center gap-2"
+          style={{
+            bottom: 'max(16px, env(safe-area-inset-bottom, 16px))',
+            fontFamily: 'var(--font-exo2), system-ui, sans-serif',
+          }}
         >
           {/* Info button */}
           <button

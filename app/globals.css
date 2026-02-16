@@ -219,7 +219,7 @@ body {
   }
 }
 
-/* Mobile panels */
+/* Mobile panels - bottom sheet with slide-up animation */
 @media (max-width: 640px) {
   .event-detail-panel,
   .settings-panel {
@@ -230,11 +230,21 @@ body {
     right: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
-    max-height: 80vh !important;
+    max-height: 85vh !important;
     border-radius: 20px 20px 0 0 !important;
     padding-bottom: env(safe-area-inset-bottom, 20px) !important;
   }
-  
+
+  /* Override desktop slide-in-right with slide-up for mobile */
+  .event-detail-panel {
+    transform: translateY(100%) !important;
+    transition: transform 0.3s ease-out !important;
+  }
+
+  .event-detail-panel.translate-x-0 {
+    transform: translateY(0) !important;
+  }
+
   .search-container {
     left: 1rem !important;
     right: 1rem !important;
@@ -253,6 +263,21 @@ html.light-mode {
 
 html.light-mode body {
   background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 50%, #e0e7ff 100%);
+}
+
+/* =============================================================================
+   TOUCH BEHAVIOR
+   ============================================================================= */
+
+/* Prevent browser default gestures on globe - Three.js handles its own touch */
+.globe-container {
+  touch-action: none;
+}
+
+/* Allow vertical scrolling in panels */
+.event-detail-panel,
+.settings-panel {
+  touch-action: pan-y;
 }
 
 /* =============================================================================

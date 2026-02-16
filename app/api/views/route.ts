@@ -89,7 +89,8 @@ export async function GET(request: NextRequest) {
   stats.lastViewed = new Date().toISOString()
   
   // Track unique IPs
-  const ipHash = Buffer.from(ip).toString('base64').slice(0, 16) // Simple hash for privacy
+  const { createHash } = await import('crypto')
+  const ipHash = createHash('sha256').update(ip).digest('hex').slice(0, 16)
   stats.uniqueIPs.add(ipHash)
   stats.todayUniqueIPs.add(ipHash)
   
@@ -114,9 +115,10 @@ export async function POST(request: NextRequest) {
   stats.today++
   stats.lastViewed = new Date().toISOString()
   
-  const ipHash = Buffer.from(ip).toString('base64').slice(0, 16)
+  const { createHash } = await import('crypto')
+  const ipHash = createHash('sha256').update(ip).digest('hex').slice(0, 16)
   stats.uniqueIPs.add(ipHash)
   stats.todayUniqueIPs.add(ipHash)
-  
+
   return NextResponse.json({ ok: true })
 }
