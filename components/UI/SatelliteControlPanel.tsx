@@ -29,8 +29,6 @@ interface SatelliteControlPanelProps {
   filters: FilterState
   onFiltersChange: (filters: ExtendedFilterState) => void
   events: Event[]
-  searchQuery: string
-  onSearchChange: (query: string) => void
   timeRange: string
   onTimeRangeChange: (range: string) => void
   zoomLevel?: number
@@ -80,8 +78,6 @@ function SatelliteControlPanel({
   filters,
   onFiltersChange,
   events,
-  searchQuery,
-  onSearchChange,
   timeRange,
   onTimeRangeChange,
   zoomLevel = 1.0,

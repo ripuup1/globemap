@@ -929,7 +929,8 @@ export default function HomePage() {
   // Simple, clear loading condition
   const isInitialLoading = !canShowContent && !degradedMode
   
-  // Hard timeout: enter degraded mode after 6s without data
+  // Hard timeout: enter degraded mode after 15s without data
+  // (API has 12s timeout, so 15s gives 3s of headroom)
   useEffect(() => {
     const hardTimeout = setTimeout(() => {
       if (events.length === 0) {
@@ -937,7 +938,7 @@ export default function HomePage() {
         setDegradedMode(true)
         setShowRetryPrompt(true)
       }
-    }, 6000)
+    }, 15000)
     
     return () => clearTimeout(hardTimeout)
   }, [events.length])
@@ -1075,8 +1076,6 @@ export default function HomePage() {
           filters={filters}
           onFiltersChange={handleFiltersChange}
           events={filteredEvents}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
           timeRange={timeRange}
           onTimeRangeChange={setTimeRange}
           zoomLevel={globeZoom}

@@ -183,47 +183,27 @@ export function normalizeGoogleNewsArticle(
  * Fetch Google News RSS feed with timeout
  */
 export async function fetchGoogleNewsRSS(url: string): Promise<string> {
+  // Direct fetch only (no CORS proxy fallback - saves 8s on failure).
+  // Server-side Vercel can fetch Google News directly.
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 5000)
+
   try {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 8000) // 8s timeout
-
-    // Try direct fetch first (works on server-side in Vercel)
-    try {
-      const response = await fetch(url, {
-        signal: controller.signal,
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
-          'Accept': 'application/rss+xml, application/xml, text/xml',
-        },
-      })
-      clearTimeout(timeoutId)
-
-      if (response.ok) {
-        return await response.text()
-      }
-    } catch {
-      clearTimeout(timeoutId)
-    }
-
-    // Fallback: Use CORS proxy
-    const controller2 = new AbortController()
-    const timeoutId2 = setTimeout(() => controller2.abort(), 8000)
-
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`
-    const response = await fetch(proxyUrl, {
-      signal: controller2.signal,
-      headers: { 'Accept': 'application/json' },
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+        'Accept': 'application/rss+xml, application/xml, text/xml',
+      },
     })
-    clearTimeout(timeoutId2)
+    clearTimeout(timeoutId)
 
-    if (!response.ok) {
-      throw new Error(`Google News RSS fetch failed: ${response.status}`)
+    if (response.ok) {
+      return await response.text()
     }
-
-    const data = await response.json()
-    return data.contents || ''
+    throw new Error(`Google News RSS fetch failed: ${response.status}`)
   } catch (error) {
-    console.error('[GoogleNewsParser] Fetch failed:', error)
+    clearTimeout(timeoutId)
     throw error
   }
 }
