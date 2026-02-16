@@ -93,7 +93,6 @@ export function generateOriginToCurrentTimeline(events: Event[]): TimelineEvent[
   
   // Select significant milestones across the entire timeline
   const timeline: TimelineEvent[] = []
-  const totalDuration = sorted[sorted.length - 1].timestamp - sorted[0].timestamp
   const targetCount = Math.min(MAX_TIMELINE_EVENTS, sorted.length)
   
   // Always include first and last

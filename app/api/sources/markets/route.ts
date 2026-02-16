@@ -7,7 +7,7 @@
  * 3. Finnhub (backup)
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 
 interface MarketData {
   symbol: string
@@ -65,7 +65,7 @@ async function fetchYahooFinance(): Promise<MarketData[]> {
         changePercent: parseFloat(changePercent.toFixed(2)),
         history: validPrices.slice(-7).map((p: number) => parseFloat(p.toFixed(2))),
       })
-    } catch (err) {
+    } catch {
       // Continue with other symbols
     }
   }
@@ -91,10 +91,10 @@ async function fetchFinnhub(): Promise<MarketData[] | null> {
   return null
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Try Yahoo Finance first (primary)
-    let data = await fetchYahooFinance()
+    const data = await fetchYahooFinance()
     
     if (data.length >= 2) {
       return NextResponse.json({

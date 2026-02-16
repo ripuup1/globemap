@@ -28,7 +28,6 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 
   static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
-    console.error('[ErrorBoundary] Caught error:', error)
     return {
       hasError: true,
       error,
@@ -36,10 +35,6 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('[ErrorBoundary] Error details:', error)
-    console.error('[ErrorBoundary] Error info:', errorInfo)
-    console.error('[ErrorBoundary] Component stack:', errorInfo.componentStack)
-    
     this.setState({
       error,
       errorInfo,
@@ -47,9 +42,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 
   componentDidUpdate(prevProps: ErrorBoundaryProps) {
-    // Reset error boundary when event changes
     if (prevProps.event !== this.props.event && this.state.hasError) {
-      console.log('[ErrorBoundary] Event changed, resetting error boundary')
       this.setState({
         hasError: false,
         error: null,

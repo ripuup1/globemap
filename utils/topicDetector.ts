@@ -8,7 +8,7 @@
  */
 
 import { Event } from '@/types/event'
-import { detectAllTrendingTopics, TrendingTopic } from './googleTrendsDetector'
+import { detectAllTrendingTopics } from './googleTrendsDetector'
 
 // ============================================================================
 // TYPES
@@ -135,12 +135,6 @@ export const FIXED_TOPICS: TopicDefinition[] = [
 // DYNAMIC TOPIC DETECTION
 // ============================================================================
 
-interface KeywordCluster {
-  keywords: string[]
-  count: number
-  events: Event[]
-}
-
 /**
  * Extract significant keywords from event titles
  */
@@ -183,7 +177,7 @@ function detectTrendingTopics(events: Event[]): TopicDefinition[] {
   // Find keywords that appear frequently (potential trending topics)
   // Lowered threshold: require only 1+ event (was 3+)
   const trendingKeywords = Array.from(keywordCounts.entries())
-    .filter(([_, count]) => count >= 1) // At least 1 event (lowered from 3)
+    .filter(([, count]) => count >= 1) // At least 1 event (lowered from 3)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 15) // Top 15 trending keywords (increased from 10)
   

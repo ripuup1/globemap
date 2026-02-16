@@ -24,10 +24,8 @@ import OrbitalCommand from '@/components/UI/OrbitalCommand'
 import SituationRing from '@/components/UI/SituationRing'
 import InformationHubIcon from '@/components/UI/InformationHubIcon'
 import InteractionHintModal from '@/components/UI/InteractionHintModal'
-import { SignalIcon, LiveIndicator } from '@/components/UI/Icons'
 import VoxTerraLogo from '@/components/UI/VoxTerraLogo'
 import ThemeToggle, { ThemeMode } from '@/components/UI/ThemeToggle'
-import { FilterState } from '@/components/Globe/Globe'
 import { isCapitalContextEvent } from '@/data/capitals'
 import { balanceCategories } from '@/utils/categoryBalance'
 import { extractCountriesFromEvents } from '@/utils/countryExtractor'
@@ -74,35 +72,32 @@ function WorldAlignLoader({ isVisible, progress }: WorldAlignLoaderProps) {
   const [shouldRender, setShouldRender] = useState(true)
   
   // Track visibility for fade-out then unmount
+  // Use timeout for both show/hide to avoid synchronous setState in effect
   useEffect(() => {
-    if (isVisible) {
-      // Showing: ensure we render
-      setShouldRender(true)
-    } else {
-      // Hiding: wait for fade animation, then unmount
+    if (!isVisible) {
       const unmountTimer = setTimeout(() => {
         setShouldRender(false)
       }, 600) // Match CSS transition duration
       return () => clearTimeout(unmountTimer)
+    } else if (!shouldRender) {
+      // Re-show after being hidden - use microtask to avoid sync setState
+      const showTimer = setTimeout(() => setShouldRender(true), 0)
+      return () => clearTimeout(showTimer)
     }
-  }, [isVisible])
+  }, [isVisible]) // eslint-disable-line react-hooks/exhaustive-deps
   
   // Cycle through fun facts - rotate every 3-4 seconds with smooth transitions
   useEffect(() => {
     if (!shouldRender) return
-    
-    // Start with random fact
-    setCurrentFact(Math.floor(Math.random() * GLOBAL_FACTS.length))
-    
+
     const cycleFact = () => {
       setFactOpacity(0)
       setTimeout(() => {
         setCurrentFact(prev => (prev + 1) % GLOBAL_FACTS.length)
         setFactOpacity(1)
-      }, 300) // Fade transition duration
+      }, 300)
     }
-    
-    // Rotate every 3.5 seconds (between 3-4 seconds as specified)
+
     const interval = setInterval(cycleFact, 3500)
     return () => clearInterval(interval)
   }, [shouldRender])

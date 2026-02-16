@@ -228,7 +228,7 @@ export async function GET(request: Request) {
         // If we found a high-confidence match, stop searching
         if (bestResult && bestResult.confidence >= 60) break
         
-      } catch (e) {
+      } catch {
         // Continue to next entity on timeout/error
         continue
       }

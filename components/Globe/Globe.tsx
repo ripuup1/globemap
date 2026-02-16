@@ -183,20 +183,13 @@ function GlobeComponent({
   const isMobile = useIsMobile()
   
   // ========== STAGED LOADING STATE ==========
-  const [globeReady, setGlobeReady] = useState(false)
-  const [mapInteractive, setMapInteractive] = useState(false)
   const [markersReady, setMarkersReady] = useState(false)
-  const [clusteringDone, setClusteringDone] = useState(false)
   const [labelsReady, setLabelsReady] = useState(false)
   const [bordersLoaded, setBordersLoaded] = useState(false)
   
-  // Wave-based marker loading state
-  const [loadingWave, setLoadingWave] = useState<'idle' | 'wave1' | 'wave2' | 'wave3' | 'complete'>('idle')
+  // Marker loading state
   const [visibleMarkers, setVisibleMarkers] = useState<GlobeMarker[]>([])
   const allMarkersRef = useRef<GlobeMarker[]>([])
-  const highPriorityMarkersRef = useRef<GlobeMarker[]>([])
-  const remainingMarkersRef = useRef<GlobeMarker[]>([])
-  const waveIndexRef = useRef(0)
   
   // Camera state - uses refs during motion to avoid re-renders, commits to state on motion end
   const [currentAltitude, setCurrentAltitude] = useState(CONFIG.DEFAULT_ALTITUDE)
@@ -215,16 +208,59 @@ function GlobeComponent({
 
   // Device-specific config - selected once based on device type
   const deviceConfig = useMemo(() => isMobile ? CONFIG_MOBILE : CONFIG_DESKTOP, [isMobile])
-  const maxMarkers = deviceConfig.MAX_MARKERS
   const maxLabels = deviceConfig.MAX_LABELS
+
+  // ========== THREE.JS CLEANUP ON UNMOUNT ==========
+  useEffect(() => {
+    return () => {
+      // Dispose Three.js resources to prevent memory leaks
+      if (globeRef.current) {
+        const globe = globeRef.current
+        try {
+          // Access the Three.js scene and renderer
+          const scene = globe.scene?.()
+          const renderer = globe.renderer?.()
+
+          if (scene) {
+            scene.traverse((obj: any) => {
+              if (obj.geometry) obj.geometry.dispose()
+              if (obj.material) {
+                if (Array.isArray(obj.material)) {
+                  obj.material.forEach((m: any) => {
+                    m.map?.dispose()
+                    m.dispose()
+                  })
+                } else {
+                  obj.material.map?.dispose()
+                  obj.material.dispose()
+                }
+              }
+            })
+          }
+
+          if (renderer) {
+            renderer.dispose()
+            renderer.forceContextLoss?.()
+          }
+        } catch {
+          // Cleanup failed - not critical
+        }
+      }
+
+      // Clear timeouts
+      if (motionTimeoutRef.current) clearTimeout(motionTimeoutRef.current)
+      if (zoomTimeoutRef.current) clearTimeout(zoomTimeoutRef.current)
+
+      // Clear cluster manager
+      clusterManager.clear()
+    }
+  }, [])
 
   // ========== SIMPLIFIED MARKER LOADING ==========
   // No complex wave system - just show markers when data arrives
-  
+
   // Globe ready immediately
   useEffect(() => {
-    setGlobeReady(true)
-    setMapInteractive(true)
     onLoadingProgress?.(25, 'Globe ready')
   }, [onLoadingProgress])
 
@@ -246,12 +282,9 @@ function GlobeComponent({
         const weightB = (b.metadata?.weightScore as number) || b.severity || 0
         return weightB - weightA
       })
-      // REMOVED slice - return all validated events to ensure all markers show
-      console.log(`[Globe] Processed events: ${filtered.length} from ${events.length} input (validated: ${filtered.length}, filtered by type: ${filters.eventTypes?.length || 0})`)
       return filtered
-    } catch (error) {
-      console.error('[Globe] Error processing events:', error)
-      return [] 
+    } catch {
+      return []
     }
   }, [events, filters.eventTypes, filters.severity])
 
@@ -260,7 +293,6 @@ function GlobeComponent({
     if (processedEvents.length === 0) {
       setVisibleMarkers([])
       pendingMarkersRef.current = null
-      setLoadingWave('idle')
       clusterManager.clear()
       return
     }
@@ -278,7 +310,6 @@ function GlobeComponent({
       
       if (isMobile) {
         // MOBILE: Show all events as individual markers (no clustering)
-        console.log(`[Globe] Mobile mode: Showing ${processedEvents.length} individual markers (no clustering)`)
         for (const event of processedEvents) {
           const style = styleProvider.getStyle(event)
           markers.push({
@@ -359,19 +390,14 @@ function GlobeComponent({
       // Sort by priority
       markers.sort((a, b) => b.priority - a.priority)
       
-      // MOBILE FIX: Diagnostic logging
-      console.log(`[Globe] Marker rendering: ${markers.length} markers from ${processedEvents.length} events (mobile: ${isMobile}, ${isMobile ? 'NO CLUSTERING - all individual markers' : 'clustered'})`)
-      
       allMarkersRef.current = markers
       setVisibleMarkers(markers)
       pendingMarkersRef.current = null
       
       onLoadingProgress?.(80, 'Markers clustered')
       setMarkersReady(true)
-      setClusteringDone(true)
-      setLoadingWave('complete')
     } catch (e) {
-      console.warn('Marker clustering failed:', e)
+      void e // Clustering failed - silently degrade
       setError('Failed to create markers')
     }
   }, [processedEvents, markerStyleStrategy, onLoadingProgress, isGlobeMoving, currentAltitude, isMobile, cameraCenter])

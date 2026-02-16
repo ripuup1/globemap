@@ -9,7 +9,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getEventsForTopic, FIXED_TOPICS } from '@/utils/topicDetector'
 import { Event } from '@/types/event'
-import { TimelineEvent, getSeverityInfo } from '@/utils/topicAggregator'
 import { generateOriginToCurrentTimeline } from '@/utils/timelineGenerator'
 
 export async function GET(

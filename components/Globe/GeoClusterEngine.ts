@@ -480,8 +480,6 @@ export function clusterEvents(events: Event[], config: ClusterConfig): ClusterRe
   const maxVisible = Math.min(config.maxClusters, ABSOLUTE_MAX_CLUSTERS)
   const visibleClusters = allClusters.slice(0, maxVisible)
   
-  console.log(`[GeoClusterEngine] Clustering result: ${allClusters.length} total clusters, showing ${visibleClusters.length} (max: ${maxVisible}, mobile: ${config.isMobile})`)
-  
   // Separate singles from multi-event clusters
   const singles = visibleClusters.filter(c => c.isSingle)
   const clusters = visibleClusters.filter(c => !c.isSingle)

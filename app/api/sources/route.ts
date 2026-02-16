@@ -34,14 +34,14 @@ export async function GET(request: NextRequest) {
         
       case 'politics': {
         const { GET: politicsGET } = await import('./politics/route')
-        const politicsResponse = await politicsGET(request)
+        const politicsResponse = await politicsGET()
         data = await politicsResponse.json()
         break
       }
-        
+
       case 'breaking': {
         const { GET: breakingGET } = await import('./breaking/route')
-        const breakingResponse = await breakingGET(request)
+        const breakingResponse = await breakingGET()
         data = await breakingResponse.json()
         break
       }

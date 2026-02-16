@@ -719,26 +719,5 @@ export function balanceCategories(events: Event[]): Event[] {
     }
   }
   
-  console.log('[CategoryBalance] Final distribution:', Object.fromEntries(finalDistribution))
-  console.log('[CategoryBalance] Regional distribution:', 
-    Object.fromEntries(Array.from(regionalDistribution.entries()).map(([region, cats]) => 
-      [region, Object.fromEntries(cats)]
-    ))
-  )
-  console.log('[CategoryBalance] Natural disasters:', naturalDisasterCount, '/', MAX_NATURAL_DISASTERS)
-  console.log('[CategoryBalance] Regional quotas:', 
-    Object.fromEntries(Array.from(regionalQuotas.entries()).map(([region, quota]) => 
-      [region, `${quota.current}/${quota.target} (min: ${quota.min})`]
-    ))
-  )
-  console.log('[CategoryBalance] Country distribution:', 
-    Object.fromEntries(Array.from(countryQuotas.entries())
-      .filter(([_, quota]) => quota.current > 0)
-      .map(([country, quota]) => 
-        [country, `${quota.current}/${quota.target} (min: ${quota.min})`]
-      )
-    )
-  )
-  
   return selected
 }

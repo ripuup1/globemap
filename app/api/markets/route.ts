@@ -221,7 +221,7 @@ export async function POST(request: Request) {
       source: data.source,
       timestamp: data.timestamp,
     })
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Invalid request' },
       { status: 400 }

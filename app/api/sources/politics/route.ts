@@ -7,7 +7,7 @@
  * 3. Reuters RSS (backup)
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 
 interface PoliticsArticle {
   title: string
@@ -130,10 +130,10 @@ function cleanHTML(text: string): string {
     .trim()
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Try C-SPAN RSS first (primary)
-    let articles = await fetchCSpanRSS()
+    const articles = await fetchCSpanRSS()
     
     if (articles.length >= 5) {
       return NextResponse.json({

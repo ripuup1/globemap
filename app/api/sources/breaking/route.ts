@@ -6,7 +6,7 @@
  * 2. AP News API
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 
 interface BreakingArticle {
   title: string
@@ -34,10 +34,10 @@ async function fetchAPNews(): Promise<BreakingArticle[]> {
   return []
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Try NewsAPI first
-    let articles = await fetchNewsAPI()
+    const articles = await fetchNewsAPI()
     
     if (articles.length >= 5) {
       return NextResponse.json({
