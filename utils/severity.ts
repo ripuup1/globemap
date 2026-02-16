@@ -167,7 +167,7 @@ export function computeSeverity(data: SeverityInputData): SeverityLevel {
     .toLowerCase()
   
   // 1. Keyword-based severity detection
-  for (const [level, config] of Object.entries(SEVERITY_KEYWORDS)) {
+  for (const [, config] of Object.entries(SEVERITY_KEYWORDS)) {
     for (const pattern of config.patterns) {
       if (pattern.test(textContent)) {
         severityScore = Math.max(severityScore, config.weight)

@@ -69,7 +69,7 @@ export async function fetchGoogleSearchTrendingTopics(): Promise<TrendingTopic[]
  * 
  * Uses ONLY Google search data - no article keyword detection
  */
-export async function detectAllTrendingTopics(events: Event[]): Promise<TrendingTopic[]> {
+export async function detectAllTrendingTopics(_events: Event[]): Promise<TrendingTopic[]> {
   // Fetch Google search trends (not article keywords)
   const googleTrends = await fetchGoogleSearchTrendingTopics()
   

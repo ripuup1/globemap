@@ -113,8 +113,7 @@ export function validateCoordinates(
  */
 export function validateCountry(
   country: string | null | undefined,
-  _lat?: number,
-  _lon?: number
+  ..._coords: number[]
 ): { valid: boolean; error?: string } {
   if (!country || typeof country !== 'string') {
     return { valid: false, error: 'Country is missing or invalid' }

@@ -5,7 +5,7 @@
  * This is the primary source for trending topic detection
  */
 
-import { GoogleTrendData, fetchRealGoogleTrends } from './googleTrendsReal'
+import { fetchRealGoogleTrends } from './googleTrendsReal'
 
 export interface TrendingSearch {
   keyword: string

@@ -154,7 +154,6 @@ function calculateTrendDirection(
   volume30d: number
 ): 'up' | 'down' | 'stable' {
   const avg7d = volume7d / 7
-  const avg30d = volume30d / 30
   
   // If 24h is significantly higher than 7d average, trending up
   if (volume24h > avg7d * 1.2) {
