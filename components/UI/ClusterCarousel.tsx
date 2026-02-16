@@ -342,9 +342,9 @@ function ClusterCarousel({
     const container = scrollContainerRef.current
     if (!container) return
     
-    container.addEventListener('scroll', updateScrollState)
+    container.addEventListener('scroll', updateScrollState, { passive: true })
     updateScrollState()
-    
+
     return () => container.removeEventListener('scroll', updateScrollState)
   }, [updateScrollState, currentEvents])
 
@@ -466,9 +466,10 @@ function ClusterCarousel({
         {canScrollLeft && (
           <button
             onClick={scrollLeft}
+            aria-label="Scroll left"
             className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110"
-            style={{ 
-              background: 'rgba(15, 23, 42, 0.9)', 
+            style={{
+              background: 'rgba(15, 23, 42, 0.9)',
               border: '1px solid rgba(255,255,255,0.1)',
               boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
             }}
@@ -483,9 +484,10 @@ function ClusterCarousel({
         {canScrollRight && currentEvents.length > 3 && (
           <button
             onClick={scrollRight}
+            aria-label="Scroll right"
             className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110"
-            style={{ 
-              background: 'rgba(15, 23, 42, 0.9)', 
+            style={{
+              background: 'rgba(15, 23, 42, 0.9)',
               border: '1px solid rgba(255,255,255,0.1)',
               boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
             }}
@@ -503,11 +505,7 @@ function ClusterCarousel({
           style={{ 
             scrollSnapType: 'x mandatory',
             WebkitOverflowScrolling: 'touch',
-            // Use CSS transforms for smooth scrolling (GPU acceleration)
             transform: 'translateZ(0)',
-            willChange: 'transform, scroll-position',
-            backfaceVisibility: 'hidden',
-            perspective: '1000px',
             cursor: 'grab',
           }}
           onMouseDown={onMouseDown}
@@ -523,7 +521,7 @@ function ClusterCarousel({
             <div style={{ width: `${visibleRange.start * 332}px`, flexShrink: 0 }} />
           )}
           
-          {currentEvents.map((event, index) => (
+          {currentEvents.map((event) => (
             <EventCard
               key={event.id}
               event={event}

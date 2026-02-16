@@ -8,7 +8,7 @@
  * - Persists preference to localStorage
  */
 
-import { memo, useEffect, useState } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 
 export type ThemeMode = 'dark' | 'light'
 
@@ -38,13 +38,17 @@ function ThemeToggle({ onThemeChange, className = '' }: ThemeToggleProps) {
   }, [])
 
   // Sync with theme changes from other sources (e.g. SatelliteControlPanel)
+  const isExternalUpdate = useRef(false)
   useEffect(() => {
     const handleExternalThemeChange = (e: CustomEvent<ThemeMode>) => {
-      setTheme(e.detail)
+      if (e.detail !== theme) {
+        isExternalUpdate.current = true
+        setTheme(e.detail)
+      }
     }
     window.addEventListener('theme-change', handleExternalThemeChange as EventListener)
     return () => window.removeEventListener('theme-change', handleExternalThemeChange as EventListener)
-  }, [])
+  }, [theme])
 
   // Persist theme and notify parent
   useEffect(() => {
@@ -52,12 +56,13 @@ function ThemeToggle({ onThemeChange, className = '' }: ThemeToggleProps) {
 
     localStorage.setItem('voxtera-theme', theme)
     onThemeChange?.(theme)
-
-    // Update document class for global styling
     document.documentElement.classList.toggle('light-mode', theme === 'light')
 
-    // Dispatch custom event so other components (SatelliteControlPanel) stay in sync
-    window.dispatchEvent(new CustomEvent('theme-change', { detail: theme }))
+    // Only dispatch if this was a local change (not from external event)
+    if (!isExternalUpdate.current) {
+      window.dispatchEvent(new CustomEvent('theme-change', { detail: theme }))
+    }
+    isExternalUpdate.current = false
   }, [theme, onThemeChange, mounted])
 
   const toggleTheme = () => {

@@ -52,7 +52,6 @@ function ISSSatellite({
   onClick,
   isExpanded,
   activeFiltersCount,
-  zoomLevel = 1.0,
   globeAltitude = 2.5,
   theme = 'dark',
 }: ISSSatelliteProps) {
@@ -133,11 +132,9 @@ function ISSSatellite({
       const zoomAwareOpacity = interpolateByAltitude(alt, ZOOM_CONFIG.minOpacity, ZOOM_CONFIG.maxOpacity)
       const depthOpacity = zoomAwareOpacity + depthFactor * 0.05
 
-      // Direct DOM update - no setState, no re-render
+      // Direct DOM update - compositor-only transform (no layout thrashing)
       if (containerRef.current) {
-        containerRef.current.style.left = `${x}px`
-        containerRef.current.style.top = `${y}px`
-        containerRef.current.style.transform = `translate(-50%, -50%) scale(${finalScale})`
+        containerRef.current.style.transform = `translate(${x - window.innerWidth / 2}px, ${y - window.innerHeight / 2}px) scale(${finalScale})`
         containerRef.current.style.opacity = String(depthOpacity)
       }
 
@@ -177,7 +174,7 @@ function ISSSatellite({
         left: '50%',
         top: '50%',
         transform: 'translate(-50%, -50%)',
-        willChange: 'transform, opacity, left, top',
+        willChange: 'transform, opacity',
         filter: solarPanelStyles.glowFilter,
         padding: '12px', // Expand touch target for mobile
       }}

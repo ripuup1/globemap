@@ -102,19 +102,19 @@ function SituationRing({
 
       if (shouldAnimate) {
         rotationRef.current = (rotationRef.current + ROTATION_SPEED * delta) % 360
-      }
 
-      // Apply ring rotation
-      if (ringRef.current) {
-        ringRef.current.style.transform = `rotate(${rotationRef.current}deg)`
-      }
-
-      // Counter-rotate labels to keep them upright
-      labelRefs.current.forEach((el) => {
-        if (el) {
-          el.style.transform = `rotate(${-rotationRef.current}deg)`
+        // Apply ring rotation
+        if (ringRef.current) {
+          ringRef.current.style.transform = `rotate(${rotationRef.current}deg)`
         }
-      })
+
+        // Counter-rotate labels to keep them upright
+        labelRefs.current.forEach((el) => {
+          if (el) {
+            el.style.transform = `rotate(${-rotationRef.current}deg)`
+          }
+        })
+      }
 
       rafRef.current = requestAnimationFrame(animate)
     }

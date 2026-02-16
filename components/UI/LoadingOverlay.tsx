@@ -13,7 +13,7 @@
  * - Optional status message
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 
 interface LoadingOverlayProps {
   /** Whether data is currently being loaded */
@@ -37,10 +37,27 @@ export default function LoadingOverlay({
   const [isExiting, setIsExiting] = useState(false)
   const animationRef = useRef<number | undefined>(undefined)
   const startTimeRef = useRef<number>(0)
-  
+  const progressRef = useRef(0)
+  const barRef = useRef<HTMLDivElement>(null)
+  const lastStateUpdateRef = useRef(0)
+
   // Determine if we should show the overlay
   const isActive = loading || processing
-  
+
+  // Direct DOM update for smooth progress (no React re-render)
+  const updateBar = useCallback((value: number) => {
+    progressRef.current = value
+    if (barRef.current) {
+      barRef.current.style.width = `${value}%`
+    }
+    // Throttle React state updates to ~5/sec (for ARIA + message display)
+    const now = Date.now()
+    if (now - lastStateUpdateRef.current > 200) {
+      lastStateUpdateRef.current = now
+      setDisplayProgress(value)
+    }
+  }, [])
+
   // Handle visibility and exit animation
   useEffect(() => {
     if (isActive) {
@@ -48,69 +65,59 @@ export default function LoadingOverlay({
       setIsExiting(false)
       startTimeRef.current = Date.now()
     } else if (visible) {
-      // Start exit animation
       setIsExiting(true)
-      // Complete the progress bar before fading out
+      updateBar(100)
       setDisplayProgress(100)
-      
-      // Fade out after progress completes
+
       const exitTimer = setTimeout(() => {
         setVisible(false)
         setIsExiting(false)
+        progressRef.current = 0
         setDisplayProgress(0)
-      }, 500) // 200ms for progress completion + 300ms fade
-      
+      }, 500)
+
       return () => clearTimeout(exitTimer)
     }
-  }, [isActive, visible])
-  
-  // Animate progress smoothly
+  }, [isActive, visible, updateBar])
+
+  // Animate progress smoothly via direct DOM manipulation
   useEffect(() => {
     if (!isActive || isExiting) return
-    
+
     const animateProgress = () => {
       const elapsed = Date.now() - startTimeRef.current
-      
+      const current = progressRef.current
+
       if (progress !== undefined) {
-        // Use provided progress, but animate smoothly towards it
-        setDisplayProgress(prev => {
-          const diff = progress - prev
-          return prev + diff * 0.1 // Smooth interpolation
-        })
+        const diff = progress - current
+        updateBar(current + diff * 0.1)
       } else {
-        // Simulate progress based on loading/processing state
-        // Loading: 0-60%, Processing: 60-95%
         let targetProgress: number
-        
+
         if (loading && !processing) {
-          // During fetch: animate from 0 to 60 over ~2 seconds
           targetProgress = Math.min(60, (elapsed / 2000) * 60)
         } else if (processing) {
-          // During processing: animate from 60 to 95
-          const processingStart = 60
           const processingProgress = Math.min(35, ((elapsed - 1000) / 3000) * 35)
-          targetProgress = processingStart + Math.max(0, processingProgress)
+          targetProgress = 60 + Math.max(0, processingProgress)
         } else {
           targetProgress = 0
         }
-        
-        setDisplayProgress(prev => {
-          const diff = targetProgress - prev
-          return prev + diff * 0.08 // Smooth easing
-        })
+
+        const diff = targetProgress - current
+        updateBar(current + diff * 0.08)
       }
-      
+
       animationRef.current = requestAnimationFrame(animateProgress)
     }
-    
+
     animationRef.current = requestAnimationFrame(animateProgress)
-    
+
     return () => {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current)
       }
     }
-  }, [isActive, isExiting, loading, processing, progress])
+  }, [isActive, isExiting, loading, processing, progress, updateBar])
   
   if (!visible) return null
   
@@ -136,7 +143,8 @@ export default function LoadingOverlay({
       >
         {/* Progress fill with enhanced glow */}
         <div
-          className="h-full transition-all duration-150 ease-out"
+          ref={barRef}
+          className="h-full"
           style={{
             width: `${displayProgress}%`,
             background: 'linear-gradient(90deg, #1d4ed8 0%, #3b82f6 40%, #60a5fa 60%, #3b82f6 100%)',
