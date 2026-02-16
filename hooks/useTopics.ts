@@ -68,8 +68,8 @@ export function useTopics(events: Event[]): UseTopicsResult {
         }
         
         setLastRefresh(Date.now())
-      } catch (error) {
-        console.error('Failed to process topics:', error)
+      } catch {
+        // Topic processing failed silently
       } finally {
         setIsLoading(false)
       }

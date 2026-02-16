@@ -156,18 +156,6 @@ function SituationRoom({
     }
   }, [isOpen, activeTopic])
   
-  // Set Economy & Finance as default active topic
-  useEffect(() => {
-    if (topics.length > 0 && !activeTopic) {
-      const economyTopic = topics.find(t => t.id === 'economy-finance')
-      if (economyTopic) {
-        setActiveTopic('economy-finance')
-      } else if (topics[0]) {
-        setActiveTopic(topics[0].id)
-      }
-    }
-  }, [topics, activeTopic, setActiveTopic])
-  
   // Get active digest
   const activeDigest = useMemo(() => {
     if (!activeTopic) return null
@@ -181,10 +169,10 @@ function SituationRoom({
     }
   }, [])
   
-  // Get topic color
-  const getTopicColor = useCallback((topic: DetectedTopic): string => {
+  // Get topic color (module-level pure function)
+  const getTopicColor = (topic: DetectedTopic): string => {
     return CATEGORY_COLORS[topic.category] || '#6366f1'
-  }, [])
+  }
 
   return (
     <>
@@ -218,7 +206,7 @@ function SituationRoom({
         `}
       >
         {/* Mobile drag handle */}
-        <div className="md:hidden flex justify-center pt-2 pb-1">
+        <div className="md:hidden flex justify-center pt-2 pb-1" aria-hidden="true">
           <div className="w-10 h-1 rounded-full bg-white/20" />
         </div>
         {/* Header - respects safe area for iOS notch/dynamic island */}
@@ -268,21 +256,23 @@ function SituationRoom({
           className="shrink-0 overflow-x-auto scrollbar-hide"
           style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
         >
-          <div className="flex gap-1 p-2 min-w-max">
+          <div className="flex gap-1 p-2 min-w-max" role="tablist" aria-label="Topics">
             {topics.map((topic) => {
               const isActive = activeTopic === topic.id
               const color = getTopicColor(topic)
               const isEconomy = topic.id === 'economy-finance'
-              
+
               return (
                 <button
                   key={topic.id}
+                  role="tab"
+                  aria-selected={isActive}
                   onClick={() => setActiveTopic(topic.id)}
                   className={`
                     px-3 py-2 rounded-lg text-[11px] font-medium whitespace-nowrap
                     transition-all duration-200
-                    ${isActive 
-                      ? 'text-white' 
+                    ${isActive
+                      ? 'text-white'
                       : 'text-gray-400 hover:text-gray-300 hover:bg-white/[0.03]'
                     }
                     ${isEconomy ? 'ring-1 ring-green-500/30' : ''}
@@ -316,7 +306,7 @@ function SituationRoom({
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden" role="tabpanel">
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
@@ -351,9 +341,8 @@ function SituationRoom({
                       )}
                     </div>
                   </div>
-                  <MarketSwitcher 
+                  <MarketSwitcher
                   markets={marketIndices}
-                  onMarketChange={() => {}}
                 />
                 </div>
               )}
@@ -386,7 +375,7 @@ function SituationRoom({
             {topics.length} topics • {events.length} events
           </span>
           <span className="text-[9px] text-gray-600 tabular-nums">
-            Last updated: {new Date(lastRefresh).toLocaleTimeString()}
+            {lastRefresh > 0 ? `Last updated: ${new Date(lastRefresh).toLocaleTimeString()}` : 'Loading...'}
           </span>
         </footer>
       </div>
