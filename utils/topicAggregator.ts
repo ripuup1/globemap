@@ -10,6 +10,8 @@
 import { Event } from '@/types/event'
 import { DetectedTopic, getEventsForTopic } from './topicDetector'
 import { calculateMeaningfulSeverity } from './severityCalculator'
+import { generateOriginToCurrentTimeline } from './timelineGenerator'
+import { deduplicateByTitleSimilarity } from './articleDeduplicator'
 
 // ============================================================================
 // TYPES
@@ -227,8 +229,6 @@ function calculateStats(events: Event[]): TopicStats {
  * Uses smart timeline generator for professional, deduplicated timelines
  */
 function generateTimeline(events: Event[], maxEvents: number = 20): TimelineEvent[] {
-  // Use smart timeline generator for better results (origin to current, no duplicates)
-  const { generateOriginToCurrentTimeline } = require('./timelineGenerator')
   const fullTimeline = generateOriginToCurrentTimeline(events)
   return fullTimeline.slice(0, maxEvents)
 }
@@ -252,8 +252,6 @@ export function generateArticles(events: Event[], maxArticles: number = 15): Art
       severity: calculateMeaningfulSeverity(event), // Use meaningful severity
     }))
   
-  // Use deduplicator to remove similar articles
-  const { deduplicateByTitleSimilarity } = require('./articleDeduplicator')
   return deduplicateByTitleSimilarity(deduplicated, 0.85).slice(0, maxArticles)
 }
 

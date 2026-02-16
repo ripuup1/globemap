@@ -1,10 +1,12 @@
 /**
  * Google News Parser
- * 
- * Parses Google News RSS feeds and normalizes to Event format
+ *
+ * Parses Google News RSS feeds and normalizes to Event format.
+ * Uses shared geocoding module for comprehensive location matching.
  */
 
 import { Event } from '@/types/event'
+import { extractAndGeocode, getFallbackLocation } from './geocoding'
 
 export interface GoogleNewsArticle {
   title: string
@@ -14,105 +16,121 @@ export interface GoogleNewsArticle {
   source?: string
 }
 
+// Region-based fallback coordinates when geocoding can't find a specific location
+const REGION_COORDS: Record<string, { lat: number; lng: number; country: string; continent: string }> = {
+  'africa': { lat: 0, lng: 20, country: 'africa', continent: 'africa' },
+  'asia': { lat: 34, lng: 100, country: 'china', continent: 'asia' },
+  'europe': { lat: 48, lng: 10, country: 'germany', continent: 'europe' },
+  'americas': { lat: 39, lng: -98, country: 'usa', continent: 'north-america' },
+  'australia': { lat: -25, lng: 133, country: 'australia', continent: 'oceania' },
+  'oceania': { lat: -25, lng: 133, country: 'australia', continent: 'oceania' },
+  'middle east': { lat: 29, lng: 47, country: 'iraq', continent: 'asia' },
+  'us': { lat: 39, lng: -98, country: 'usa', continent: 'north-america' },
+  'gb': { lat: 51.5, lng: -0.13, country: 'uk', continent: 'europe' },
+  'au': { lat: -25, lng: 133, country: 'australia', continent: 'oceania' },
+  'ca': { lat: 56, lng: -106, country: 'canada', continent: 'north-america' },
+  'de': { lat: 51, lng: 10, country: 'germany', continent: 'europe' },
+  'fr': { lat: 46, lng: 2, country: 'france', continent: 'europe' },
+  'jp': { lat: 36, lng: 138, country: 'japan', continent: 'asia' },
+  'cn': { lat: 35, lng: 104, country: 'china', continent: 'asia' },
+  'in': { lat: 20, lng: 78, country: 'india', continent: 'asia' },
+  'br': { lat: -14, lng: -51, country: 'brazil', continent: 'south-america' },
+  'mx': { lat: 23, lng: -102, country: 'mexico', continent: 'north-america' },
+  'za': { lat: -30, lng: 22, country: 'south africa', continent: 'africa' },
+  'ng': { lat: 9, lng: 8, country: 'nigeria', continent: 'africa' },
+  'ke': { lat: 0, lng: 37, country: 'kenya', continent: 'africa' },
+  'eg': { lat: 26, lng: 30, country: 'egypt', continent: 'africa' },
+}
+
 /**
  * Parse Google News RSS XML
  */
 export function parseGoogleNewsRSS(xml: string, region: string): GoogleNewsArticle[] {
   const articles: GoogleNewsArticle[] = []
-  
+
   try {
-    // Extract items from RSS
     const itemMatches = xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)
-    
+
     for (const match of itemMatches) {
       const itemXml = match[1]
-      
+
       const titleMatch = itemXml.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>|<title>(.*?)<\/title>/i)
       const linkMatch = itemXml.match(/<link>(.*?)<\/link>/i)
       const descMatch = itemXml.match(/<description><!\[CDATA\[(.*?)\]\]><\/description>|<description>(.*?)<\/description>/i)
       const pubDateMatch = itemXml.match(/<pubDate>(.*?)<\/pubDate>/i)
       const sourceMatch = itemXml.match(/<source>(.*?)<\/source>/i)
-      
+
       if (titleMatch && linkMatch) {
         const title = (titleMatch[1] || titleMatch[2] || '').trim()
         const link = linkMatch[1].trim()
         const description = (descMatch?.[1] || descMatch?.[2] || '').trim()
         const pubDate = pubDateMatch?.[1]?.trim() || new Date().toISOString()
         const source = sourceMatch?.[1]?.trim() || 'Google News'
-        
-        articles.push({
-          title,
-          link,
-          description,
-          pubDate,
-          source,
-        })
+
+        articles.push({ title, link, description, pubDate, source })
       }
     }
   } catch (error) {
     console.error('[GoogleNewsParser] Failed to parse RSS:', error)
   }
-  
+
   return articles
 }
 
 /**
- * Geocode article location from title/description
- * Uses simple keyword matching for now (can be enhanced with geocoding API)
+ * Normalize Google News article to Event format.
+ * Uses shared geocoding module (150+ cities, 80+ countries).
+ * Falls back to region-based coordinates if no specific location found.
  */
-export async function geocodeGoogleNewsArticle(
-  article: GoogleNewsArticle
-): Promise<{ lat: number; lng: number; locationName?: string } | null> {
-  // Simple country/city keyword matching
-  const locationKeywords: Record<string, { lat: number; lng: number; name: string }> = {
-    'africa': { lat: 0, lng: 20, name: 'Africa' },
-    'south africa': { lat: -30, lng: 25, name: 'South Africa' },
-    'nigeria': { lat: 9, lng: 8, name: 'Nigeria' },
-    'kenya': { lat: 1, lng: 38, name: 'Kenya' },
-    'egypt': { lat: 27, lng: 30, name: 'Egypt' },
-    'australia': { lat: -25, lng: 133, name: 'Australia' },
-    'sydney': { lat: -33.87, lng: 151.21, name: 'Sydney' },
-    'melbourne': { lat: -37.81, lng: 144.96, name: 'Melbourne' },
-    'canberra': { lat: -35.28, lng: 149.13, name: 'Canberra' },
-    'brisbane': { lat: -27.47, lng: 153.03, name: 'Brisbane' },
-    'perth': { lat: -31.95, lng: 115.86, name: 'Perth' },
-  }
-  
-  const searchText = `${article.title} ${article.description || ''}`.toLowerCase()
-  
-  // Try exact matches first
-  for (const [keyword, location] of Object.entries(locationKeywords)) {
-    if (searchText.includes(keyword)) {
-      return { ...location }
-    }
-  }
-  
-  // Fallback: return null (will need geocoding API for better accuracy)
-  return null
-}
-
-/**
- * Normalize Google News article to Event format
- */
-export async function normalizeGoogleNewsArticle(
+export function normalizeGoogleNewsArticle(
   article: GoogleNewsArticle,
   region: string,
   category?: string
-): Promise<Event | null> {
-  const geocode = await geocodeGoogleNewsArticle(article)
-  
-  if (!geocode) {
-    // Skip articles without location
-    return null
+): Event | null {
+  const searchText = `${article.title} ${article.description || ''}`
+
+  // Try shared geocoding (150+ cities, 80+ countries)
+  const geo = extractAndGeocode(searchText)
+
+  let lat: number
+  let lng: number
+  let locationName: string
+  let country: string
+  let continent: string
+
+  if (geo) {
+    lat = geo.lat
+    lng = geo.lng
+    locationName = geo.location
+    country = geo.country
+    continent = geo.continent
+  } else {
+    // Fall back to region-based coordinates with slight randomization
+    const regionCoords = REGION_COORDS[region.toLowerCase()]
+    if (regionCoords) {
+      lat = regionCoords.lat + (Math.random() - 0.5) * 4
+      lng = regionCoords.lng + (Math.random() - 0.5) * 4
+      locationName = region
+      country = regionCoords.country
+      continent = regionCoords.continent
+    } else {
+      // Last resort: use rotating fallback locations
+      const fallback = getFallbackLocation()
+      lat = fallback.lat
+      lng = fallback.lng
+      locationName = fallback.location
+      country = fallback.country
+      continent = fallback.continent
+    }
   }
-  
+
   // Parse publication date
   const timestamp = new Date(article.pubDate).getTime() || Date.now()
-  
+
   // Determine category from title/description
-  const text = `${article.title} ${article.description || ''}`.toLowerCase()
+  const text = searchText.toLowerCase()
   let eventType: string = 'other'
-  
+
   if (text.match(/\b(breaking|urgent|alert)\b/)) eventType = 'breaking'
   else if (text.match(/\b(politics|election|government|president|prime minister)\b/)) eventType = 'politics'
   else if (text.match(/\b(economy|finance|market|gdp|inflation|trade)\b/)) eventType = 'business'
@@ -123,31 +141,33 @@ export async function normalizeGoogleNewsArticle(
   else if (text.match(/\b(climate|weather|flood|drought|wildfire)\b/)) eventType = 'climate'
   else if (text.match(/\b(earthquake|quake|seismic)\b/)) eventType = 'earthquake'
   else if (text.match(/\b(conflict|war|military|attack)\b/)) eventType = 'armed-conflict'
-  
+
   // Override with provided category if available
-  if (category) {
+  if (category && category !== 'breaking') {
     eventType = category
   }
-  
-  // Calculate severity (simple heuristic)
-  let severity = 5 // Default
+
+  // Calculate severity
+  let severity = 5
   if (text.match(/\b(critical|urgent|breaking|alert|emergency)\b/)) severity = 8
   else if (text.match(/\b(important|major|significant)\b/)) severity = 6
   else if (text.match(/\b(minor|small|local)\b/)) severity = 3
-  
+
   return {
     id: `google-news-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     title: article.title,
     description: article.description,
     type: eventType as any,
     severity: severity as any,
-    latitude: geocode.lat,
-    longitude: geocode.lng,
+    latitude: lat,
+    longitude: lng,
     timestamp,
     source: article.source || 'Google News',
     metadata: {
       url: article.link,
-      locationName: geocode.locationName,
+      locationName,
+      country,
+      continent,
       region,
       sourceName: article.source || 'Google News',
       sourceTier: 1,
@@ -160,24 +180,48 @@ export async function normalizeGoogleNewsArticle(
 }
 
 /**
- * Fetch Google News RSS feed
+ * Fetch Google News RSS feed with timeout
  */
 export async function fetchGoogleNewsRSS(url: string): Promise<string> {
   try {
-    // Use CORS proxy if needed
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 8000) // 8s timeout
+
+    // Try direct fetch first (works on server-side in Vercel)
+    try {
+      const response = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+          'Accept': 'application/rss+xml, application/xml, text/xml',
+        },
+      })
+      clearTimeout(timeoutId)
+
+      if (response.ok) {
+        return await response.text()
+      }
+    } catch {
+      clearTimeout(timeoutId)
+    }
+
+    // Fallback: Use CORS proxy
+    const controller2 = new AbortController()
+    const timeoutId2 = setTimeout(() => controller2.abort(), 8000)
+
     const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`
     const response = await fetch(proxyUrl, {
-      headers: {
-        'Accept': 'application/xml',
-      },
+      signal: controller2.signal,
+      headers: { 'Accept': 'application/json' },
     })
-    
+    clearTimeout(timeoutId2)
+
     if (!response.ok) {
       throw new Error(`Google News RSS fetch failed: ${response.status}`)
     }
-    
+
     const data = await response.json()
-    return data.contents || data
+    return data.contents || ''
   } catch (error) {
     console.error('[GoogleNewsParser] Fetch failed:', error)
     throw error
@@ -192,22 +236,21 @@ export async function fetchGoogleNewsByRegion(
   category?: string
 ): Promise<Event[]> {
   const events: Event[] = []
-  
-  // Build Google News RSS URL
+
   let query = region
   if (category) {
     query = `${region}+${category}`
   }
-  
+
   const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en&gl=US&ceid=US:en`
-  
+
   try {
     const xml = await fetchGoogleNewsRSS(rssUrl)
     const articles = parseGoogleNewsRSS(xml, region)
-    
-    // Normalize articles to events
-    for (const article of articles.slice(0, 20)) { // Limit to 20 per region/category
-      const event = await normalizeGoogleNewsArticle(article, region, category)
+
+    // Normalize articles to events (now synchronous, no more dropped articles)
+    for (const article of articles.slice(0, 20)) {
+      const event = normalizeGoogleNewsArticle(article, region, category)
       if (event) {
         events.push(event)
       }
@@ -215,6 +258,6 @@ export async function fetchGoogleNewsByRegion(
   } catch (error) {
     console.error(`[GoogleNewsParser] Failed to fetch ${region}/${category}:`, error)
   }
-  
+
   return events
 }

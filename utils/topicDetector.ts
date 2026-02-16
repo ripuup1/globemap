@@ -223,31 +223,38 @@ export async function detectTopics(events: Event[]): Promise<DetectedTopic[]> {
   const now = Date.now()
   const recentWindow = 48 * 60 * 60 * 1000 // 48 hours
   
-  // Get Google Trends (SEARCH-ONLY, no article keywords)
+  // Get Google Trends (with 8s timeout to prevent blocking the Situation Room)
   let googleTrends: Array<TopicDefinition & { searchVolume24h?: number; searchVolume7d?: number; trendDirection?: 'up' | 'down' | 'stable' }> = []
   try {
-    const trendingTopics = await detectAllTrendingTopics(events)
+    const trendingTopics = await Promise.race([
+      detectAllTrendingTopics(events),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 8000)),
+    ])
     googleTrends = trendingTopics.map(tt => ({
       id: tt.id,
       name: tt.name,
       keywords: tt.keywords,
       category: tt.category,
       priority: tt.priority,
-      searchVolume24h: tt.searchVolume ? Math.round(tt.searchVolume * 10000) : undefined, // Convert 0-100 scale to approximate volume
+      searchVolume24h: tt.searchVolume ? Math.round(tt.searchVolume * 10000) : undefined,
       searchVolume7d: tt.searchVolume ? Math.round(tt.searchVolume * 70000) : undefined,
-      trendDirection: 'up' as const, // Default to 'up' for trending topics
+      trendDirection: 'up' as const,
     }))
   } catch (error) {
-    console.warn('[TopicDetector] Google Trends fetch failed, using fallback:', error)
+    console.warn('[TopicDetector] Google Trends failed/timeout, using event-based fallback:', error)
   }
-  
-  // REMOVED: eventTrendingTopics - we no longer use article keywords for trending detection
-  // All trending topics come from Google search data only
-  
-  // Combine: Fixed (always include Economy & Finance) + Google Trends (SEARCH-ONLY)
+
+  // Fallback: If Google Trends returned nothing, detect trends from event keywords
+  let eventTrendingTopics: TopicDefinition[] = []
+  if (googleTrends.length === 0) {
+    eventTrendingTopics = detectTrendingTopics(events)
+  }
+
+  // Combine: Fixed topics + Google Trends + event-based trending fallback
   const allTopics: Array<TopicDefinition & { searchVolume24h?: number; searchVolume7d?: number; trendDirection?: 'up' | 'down' | 'stable' }> = [
     ...FIXED_TOPICS,
-    ...googleTrends, // Only Google search trends, no article keywords
+    ...googleTrends,
+    ...eventTrendingTopics,
   ]
   
   // Match events to topics

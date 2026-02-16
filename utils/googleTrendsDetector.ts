@@ -6,8 +6,7 @@
  */
 
 import { Event } from '@/types/event'
-import { fetchGoogleSearchTrends, getTrendingKeywordsForTopics } from './googleSearchTrends'
-import { GoogleTrendData, fetchRealGoogleTrends } from './googleTrendsReal'
+import { fetchGoogleSearchTrends } from './googleSearchTrends'
 
 export interface TrendingTopic {
   id: string
@@ -31,8 +30,8 @@ export async function fetchGoogleSearchTrendingTopics(): Promise<TrendingTopic[]
     
     // Convert search trends to trending topics
     for (const trend of searchTrends.slice(0, 20)) {
-      // Only include high-volume, trending-up searches
-      if (trend.trendDirection === 'up' && trend.searchVolume24h > 50000) {
+      // Include trending-up searches (lowered threshold since volumes are estimated)
+      if (trend.trendDirection === 'up' && trend.searchVolume24h > 10000) {
         topics.push({
           id: `trending-${trend.keyword.toLowerCase().replace(/\s+/g, '-')}`,
           name: trend.keyword.charAt(0).toUpperCase() + trend.keyword.slice(1),

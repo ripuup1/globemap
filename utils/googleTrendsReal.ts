@@ -38,11 +38,15 @@ export async function fetchRealGoogleTrends(
     
     for (const url of rssUrls) {
       try {
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 5000) // 5s timeout per request
         const response = await fetch(url, {
+          signal: controller.signal,
           headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
           },
         })
+        clearTimeout(timeoutId)
         
         if (!response.ok) continue
         
