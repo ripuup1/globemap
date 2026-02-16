@@ -286,7 +286,7 @@ async function fetchRSSFallback(): Promise<{ events: Event[]; fromSupabase: bool
 
   const googleNewsEvents = googleNewsResults.flat()
   const rssEvents = rssResults.flat()
-  console.log(`[Events API] Google News: ${googleNewsEvents.length}, RSS: ${rssEvents.length}`)
+  // Source counts tracked in response stats
 
   // 3. Google Trends (non-blocking, behind circuit breaker + race timeout)
   let googleTrendsEvents: Event[] = []
@@ -305,7 +305,7 @@ async function fetchRSSFallback(): Promise<{ events: Event[]; fromSupabase: bool
       console.warn(`[Events API] Google Trends failed (${trendsCircuitBreaker.failures}/${trendsCircuitBreaker.maxFailures}):`, error)
     }
   } else {
-    console.log('[Events API] Google Trends circuit breaker OPEN - skipping')
+    // Circuit breaker open - skip Google Trends
   }
 
   // 4. Hardcoded ongoing conflicts
@@ -320,7 +320,7 @@ async function fetchRSSFallback(): Promise<{ events: Event[]; fromSupabase: bool
   const combined = [...conflicts, ...rssEvents, ...googleNewsEvents, ...googleTrendsEvents]
 
   setCachedEvents(combined, 'rss-fallback')
-  console.log(`[Events API] Total: ${combined.length} (GNews: ${googleNewsEvents.length}, Trends: ${googleTrendsEvents.length}, RSS: ${rssEvents.length}, Conflicts: ${conflicts.length})`)
+  // Total tracked via response stats
 
   return { events: combined, fromSupabase: false, cached: false }
 }
@@ -394,7 +394,6 @@ export async function GET(request: NextRequest) {
     }
 
     const durationMs = Date.now() - startTime
-    console.log(`[Events API] Response: ${result.events.length} events (source: ${result.fromSupabase ? 'supabase' : 'rss-fallback'}, cached: ${result.cached}, duration: ${durationMs}ms)`)
 
     return NextResponse.json({
       events: result.events,

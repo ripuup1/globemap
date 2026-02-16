@@ -1,11 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Exo_2, Inter } from "next/font/google";
+import { Geist_Mono, Exo_2, Inter } from "next/font/google";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -113,7 +108,7 @@ export default function RootLayout({
               "@type": "WebApplication",
               "name": "Vox Terra",
               "description": "Interactive 3D globe showing real-time global news and events",
-              "url": "https://vox-terra.vercel.app",
+              "url": "https://nextjs-globe.vercel.app",
               "applicationCategory": "NewsApplication",
               "operatingSystem": "Any",
               "browserRequirements": "Requires JavaScript",
@@ -127,7 +122,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${exo2.variable} ${inter.variable} antialiased`}
+        className={`${geistMono.variable} ${exo2.variable} ${inter.variable} antialiased`}
       >
         {children}
       </body>

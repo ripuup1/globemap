@@ -40,7 +40,7 @@ function TopicDigest({ digest, onArticleClick }: TopicDigestProps) {
           setTimeline(data.timeline)
         }
       } catch (error) {
-        console.warn('[TopicDigest] Timeline fetch failed, using digest timeline:', error)
+        void error
         // Fallback to digest timeline
         setTimeline(digest.timeline)
       } finally {
@@ -73,7 +73,7 @@ function TopicDigest({ digest, onArticleClick }: TopicDigestProps) {
           setArticles(digest.articles)
         }
       } catch (error) {
-        console.warn('[TopicDigest] Intelligent sources fetch failed, using digest articles:', error)
+        void error
         setArticles(digest.articles)
       } finally {
         setIsLoadingArticles(false)

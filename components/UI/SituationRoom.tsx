@@ -136,7 +136,7 @@ function SituationRoom({
           setMarketSource(data.source || 'unknown')
         }
       } catch (err) {
-        console.warn('Market data fetch failed, using defaults')
+        void err
       }
     }
     
