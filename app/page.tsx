@@ -300,10 +300,14 @@ export default function HomePage() {
   const [showInfoModal, setShowInfoModal] = useState(false)
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false)
 
-  // Fun fact - picked once on mount, shown during initial data fetch
-  const funFact = useRef(GLOBE_FACTS[Math.floor(Math.random() * GLOBE_FACTS.length)])
+  // Fun fact - picked on client mount so it's truly random each refresh
+  const [funFact, setFunFact] = useState('')
   const [showFunFact, setShowFunFact] = useState(true)
-  
+
+  useEffect(() => {
+    setFunFact(GLOBE_FACTS[Math.floor(Math.random() * GLOBE_FACTS.length)])
+  }, [])
+
   // Hide fun fact once events have loaded
   useEffect(() => {
     if (!loading && events.length > 0 && showFunFact) {
@@ -1014,7 +1018,7 @@ export default function HomePage() {
               <p className="text-gray-500 text-sm leading-relaxed">
                 <span className="text-gray-400 font-medium">Did you know?</span>
                 <br />
-                {funFact.current}
+                {funFact}
               </p>
             </div>
           </div>
