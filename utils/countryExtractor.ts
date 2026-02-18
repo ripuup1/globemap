@@ -213,6 +213,16 @@ function generateKeywords(normalized: string, aliases: string[]): string[] {
 }
 
 /**
+ * Get the normalized country key for a raw country string.
+ * Used for direct key comparison instead of substring keyword matching.
+ */
+export function getCountryKey(rawCountry: string): string {
+  if (!rawCountry) return ''
+  const result = normalizeCountryName(rawCountry)
+  return result.normalized.toLowerCase()
+}
+
+/**
  * Extract all unique countries from events
  */
 export function extractCountriesFromEvents(events: Event[]): CountryOption[] {

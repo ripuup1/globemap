@@ -23,7 +23,7 @@ import InteractionHintModal from '@/components/UI/InteractionHintModal'
 import VoxTerraLogo from '@/components/UI/VoxTerraLogo'
 import ThemeToggle, { ThemeMode } from '@/components/UI/ThemeToggle'
 import { balanceCategories } from '@/utils/categoryBalance'
-import { extractCountriesFromEvents } from '@/utils/countryExtractor'
+import { extractCountriesFromEvents, getCountryKey } from '@/utils/countryExtractor'
 import { calculateDistance } from '@/utils/geo'
 import { SEARCH_SYNONYMS } from '@/utils/searchSynonyms'
 
@@ -221,23 +221,65 @@ function WorldAlignLoader({ isVisible, progress }: WorldAlignLoaderProps) {
   )
 }
 
+// Fun facts about the world shown during loading
+const GLOBE_FACTS = [
+  "Earth's core is as hot as the surface of the Sun — about 5,500°C.",
+  "There are more trees on Earth than stars in the Milky Way.",
+  "Russia spans 11 time zones, more than any other country.",
+  "The Pacific Ocean is larger than all the land on Earth combined.",
+  "Antarctica contains about 70% of Earth's fresh water.",
+  "A day on Earth was only 6 hours long 4.5 billion years ago.",
+  "The Dead Sea is the lowest point on Earth's surface at 430m below sea level.",
+  "Lightning strikes Earth about 8 million times per day.",
+  "The Amazon Rainforest produces 20% of the world's oxygen.",
+  "Mount Everest grows about 4mm taller every year.",
+  "The Sahara Desert is roughly the same size as the United States.",
+  "Earth's atmosphere extends about 10,000 km into space.",
+  "There are more than 7,000 languages spoken worldwide.",
+  "The Great Wall of China spans over 21,000 kilometers.",
+  "Greenland is the world's largest island that isn't a continent.",
+  "Lake Baikal in Russia holds 20% of the world's unfrozen fresh water.",
+  "The Mariana Trench is deeper than Mount Everest is tall.",
+  "Australia is wider than the Moon — 4,000 km vs 3,400 km.",
+  "Canada has more lakes than the rest of the world combined.",
+  "The Nile River flows through 11 different countries.",
+  "Tokyo is the most populated metropolitan area on Earth.",
+  "There are 195 countries recognized by the United Nations.",
+  "The Earth rotates at about 1,670 km/h at the equator.",
+  "Oceans cover 71% of Earth's surface but we've explored less than 5%.",
+  "Vatican City is the smallest country in the world at 0.44 km².",
+  "The ISS orbits Earth about 16 times every day.",
+  "Iceland has no army, navy, or air force.",
+  "More people live inside the circle of East Asia than outside it.",
+  "The Caspian Sea is actually the world's largest lake.",
+  "Africa is the only continent in all four hemispheres.",
+]
+
 // Dynamically import Globe to avoid SSR issues with Three.js
 const GlobeComponent = dynamic(
   () => import('@/components/Globe/Globe'),
-  { 
+  {
     ssr: false,
-    loading: () => (
-      // Clean black loading screen
-      <div className="flex items-center justify-center h-screen bg-black">
-        <div className="flex flex-col items-center gap-4">
-          <div 
-            className="w-12 h-12 rounded-full border-2 border-gray-700 border-t-blue-500"
-            style={{ animation: 'spin 1s linear infinite' }}
-          />
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    loading: () => {
+      // Pick a random fact (runs once per mount/refresh)
+      const fact = GLOBE_FACTS[Math.floor(Math.random() * GLOBE_FACTS.length)]
+      return (
+        <div className="flex items-center justify-center h-screen bg-black">
+          <div className="flex flex-col items-center gap-6 px-8 max-w-lg">
+            <div
+              className="w-12 h-12 rounded-full border-2 border-gray-700 border-t-blue-500"
+              style={{ animation: 'spin 1s linear infinite' }}
+            />
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            <p className="text-gray-500 text-center text-sm leading-relaxed">
+              <span className="text-gray-400 font-medium">Did you know?</span>
+              <br />
+              {fact}
+            </p>
+          </div>
         </div>
-      </div>
-    ),
+      )
+    },
   }
 )
 
@@ -386,17 +428,11 @@ export default function HomePage() {
         }
       }
 
-      // Country filter - filter by selected countries using keywords
+      // Country filter - filter by normalized country key
       if (filters.selectedCountries && filters.selectedCountries.length > 0) {
-        const eventCountry = (event.metadata?.country as string || '').toLowerCase()
-        const eventLocation = (event.metadata?.locationName as string || '').toLowerCase()
-        const searchText = `${eventCountry} ${eventLocation}`
-        
-        const matchesCountry = filters.selectedCountries.some(countryKey => {
-          const keywords = COUNTRY_KEYWORDS_MAP[countryKey] || [countryKey]
-          return keywords.some(kw => searchText.includes(kw))
-        })
-        if (!matchesCountry) return false
+        const rawCountry = (event.metadata?.country as string || '')
+        const normalizedKey = getCountryKey(rawCountry)
+        if (!normalizedKey || !filters.selectedCountries.includes(normalizedKey)) return false
       }
 
       return true
@@ -434,15 +470,6 @@ export default function HomePage() {
     return extractCountriesFromEvents(events)
   }, [events])
 
-  // Create country keywords map for filtering (from all events, not filtered)
-  const COUNTRY_KEYWORDS_MAP = useMemo(() => {
-    const map: Record<string, string[]> = {}
-    countryOptions.forEach(country => {
-      map[country.value] = country.keywords
-    })
-    return map
-  }, [countryOptions])
-
   // ========== COUNTRY FILTER ISOLATION ==========
   // When country filter is active, compute which event IDs should be visible on globe
   // Non-matching markers will be hidden with scale+fade animation
@@ -451,27 +478,20 @@ export default function HomePage() {
     if (!filters.selectedCountries || filters.selectedCountries.length === 0) {
       return null
     }
-    
+
     // Filter ALL events (not just filtered) to get IDs that match selected countries
     const matchingIds: string[] = []
-    
+
     events.forEach(event => {
-      const eventCountry = (event.metadata?.country as string || '').toLowerCase()
-      const eventLocation = (event.metadata?.locationName as string || '').toLowerCase()
-      const searchText = `${eventCountry} ${eventLocation}`
-      
-      const matchesCountry = filters.selectedCountries!.some(countryKey => {
-        const keywords = COUNTRY_KEYWORDS_MAP[countryKey] || [countryKey]
-        return keywords.some(kw => searchText.includes(kw))
-      })
-      
-      if (matchesCountry) {
+      const rawCountry = (event.metadata?.country as string || '')
+      const normalizedKey = getCountryKey(rawCountry)
+      if (normalizedKey && filters.selectedCountries!.includes(normalizedKey)) {
         matchingIds.push(event.id)
       }
     })
-    
+
     return matchingIds
-  }, [events, filters.selectedCountries, COUNTRY_KEYWORDS_MAP])
+  }, [events, filters.selectedCountries])
 
   // All balanced events with coordinates go to the globe
   const geoEvents = useMemo(() => {

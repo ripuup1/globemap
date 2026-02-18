@@ -14,7 +14,7 @@ import { FilterState } from '../Globe/Globe'
 import { Event } from '@/types/event'
 import ISSSatellite from './ISSSatellite'
 import { getCategoryColor, ICON_CATEGORIES } from '../Globe/markerIcons'
-import { extractCountriesFromEvents } from '@/utils/countryExtractor'
+import { extractCountriesFromEvents, getCountryKey } from '@/utils/countryExtractor'
 import { calculateDistance } from '@/utils/geo'
 
 // Extended FilterState for new features
@@ -309,30 +309,25 @@ function SatelliteControlPanel({
     }, {} as Record<string, number>)
   , [events])
 
-  // Pre-compute country event counts (avoids O(n*m) in render loop)
+  // Pre-compute country event counts using normalization (avoids substring false positives)
   const countryEventCounts = useMemo(() => {
     const counts = new Map<string, number>()
-    for (const option of countryOptions) {
-      let count = 0
-      for (const e of events) {
-        const eventCountry = (e.metadata?.country as string || '').toLowerCase()
-        const eventLocation = (e.metadata?.locationName as string || '').toLowerCase()
-        const searchText = `${eventCountry} ${eventLocation}`
-        if (option.keywords.some(kw => searchText.includes(kw))) {
-          count++
-        }
-      }
-      counts.set(option.value, count)
+    for (const e of events) {
+      const rawCountry = (e.metadata?.country as string || '')
+      if (!rawCountry) continue
+      const key = getCountryKey(rawCountry)
+      counts.set(key, (counts.get(key) || 0) + 1)
     }
     return counts
-  }, [events, countryOptions])
+  }, [events])
 
-  // Filter events by country
+  // Filter events by country using normalization
   const filteredByCountry = useMemo(() => {
     if (selectedCountries.length === 0) return events
     return events.filter(e => {
-      const country = (e.metadata?.country as string || '').toLowerCase()
-      return selectedCountries.some(c => country.includes(c))
+      const rawCountry = (e.metadata?.country as string || '')
+      const key = getCountryKey(rawCountry)
+      return key && selectedCountries.includes(key)
     })
   }, [events, selectedCountries])
 
