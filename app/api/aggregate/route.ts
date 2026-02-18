@@ -33,7 +33,7 @@ const WEIGHT_CONFIG = {
   ASIA_WEIGHT: 1.3,
 }
 
-// EXPANDED: 15 RSS Feeds with higher item limits
+// EXPANDED: 23 RSS Feeds with higher item limits (global diversity)
 const RSS_FEEDS = [
   // US News (primary)
   { url: 'https://rss.nytimes.com/services/xml/rss/nyt/World.xml', name: 'NY Times World', maxItems: 40 },
@@ -56,6 +56,17 @@ const RSS_FEEDS = [
   { url: 'https://feeds.arstechnica.com/arstechnica/index', name: 'Ars Technica', maxItems: 15 },
   // Latin America
   { url: 'https://rss.nytimes.com/services/xml/rss/nyt/Americas.xml', name: 'NY Times Americas', maxItems: 20 },
+  // Reuters (global wire service)
+  { url: 'https://feeds.reuters.com/reuters/topNews', name: 'Reuters', maxItems: 35 },
+  { url: 'https://feeds.reuters.com/reuters/worldNews', name: 'Reuters World', maxItems: 30 },
+  // Asia-Pacific
+  { url: 'https://www.scmp.com/rss/91/feed', name: 'SCMP Asia', maxItems: 25 },
+  { url: 'https://www3.nhk.or.jp/nhkworld/en/news/feeds/', name: 'NHK World', maxItems: 20 },
+  // Europe (non-English origin)
+  { url: 'https://rss.dw.com/rdf/rss-en-all', name: 'DW News', maxItems: 25 },
+  { url: 'https://www.france24.com/en/rss', name: 'France 24', maxItems: 25 },
+  // Africa
+  { url: 'https://nation.africa/service/rss/feeds/news.rss', name: 'Nation Africa', maxItems: 20 },
 ]
 
 // ============================================================================
