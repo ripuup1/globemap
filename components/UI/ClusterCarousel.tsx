@@ -27,7 +27,6 @@ import {
   AlertIcon,
   CloseIcon,
   ExternalLinkIcon,
-  ChevronRight,
 } from './Icons'
 import { capitalizeCountry, capitalizeCity } from '@/utils/capitalization'
 
@@ -39,7 +38,6 @@ interface ClusterCarouselProps {
   regionName: string
   position: { lat: number; lng: number }
   onSelectEvent: (event: Event) => void
-  onOpenInSituationRoom: (categoryId?: string) => void
   onClose: () => void
 }
 
@@ -96,7 +94,6 @@ function ClusterCarousel({
   regionName,
   position,
   onSelectEvent,
-  onOpenInSituationRoom,
   onClose,
 }: ClusterCarouselProps) {
   const [activeCategory, setActiveCategory] = useState('all')
@@ -396,23 +393,13 @@ function ClusterCarousel({
           </span>
         </div>
         
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => onOpenInSituationRoom(activeCategory !== 'all' ? activeCategory : undefined)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium rounded transition-colors hover:bg-white/5"
-            style={{ color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.1)' }}
-          >
-            Open in Situation Room
-            <ChevronRight size={12} />
-          </button>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded transition-colors hover:bg-white/5"
-            aria-label="Close carousel"
-          >
-            <CloseIcon size={16} color="rgba(255,255,255,0.5)" />
-          </button>
-        </div>
+        <button
+          onClick={onClose}
+          className="p-1.5 rounded transition-colors hover:bg-white/5"
+          aria-label="Close carousel"
+        >
+          <CloseIcon size={16} color="rgba(255,255,255,0.5)" />
+        </button>
       </div>
 
       {/* Category Tabs */}
@@ -576,7 +563,10 @@ const EventCard = memo(function EventCard({ event, categoryColor, onClick, isMob
   return (
     <article
       onClick={onClick}
-      className="flex-shrink-0 cursor-pointer rounded-lg"
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.() } }}
+      tabIndex={0}
+      role="button"
+      className="flex-shrink-0 cursor-pointer rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
       style={{
         width: `${cardWidth}px`,
         background: 'rgba(255, 255, 255, 0.03)',

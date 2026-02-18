@@ -17,7 +17,7 @@ interface MarketSwitcherProps {
 }
 
 function MarketSwitcher({ markets, onMarketChange }: MarketSwitcherProps) {
-  const [selectedMarket, setSelectedMarket] = useState<MarketIndex>(markets[0])
+  const [selectedMarket, setSelectedMarket] = useState<MarketIndex | null>(markets[0] ?? null)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   
@@ -46,8 +46,8 @@ function MarketSwitcher({ markets, onMarketChange }: MarketSwitcherProps) {
     onMarketChange?.(market)
   }
   
-  if (markets.length === 0) return null
-  
+  if (markets.length === 0 || !selectedMarket) return null
+
   return (
     <div className="w-full">
       {/* Dropdown Selector (Quick Access) */}

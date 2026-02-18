@@ -130,6 +130,60 @@ export const CITIES: GeoLabel[] = [
   { name: 'Lahore', lat: 31.5497, lng: 74.3436, type: 'city', population: 12600000, minZoom: 2.5 },
   { name: 'Brisbane', lat: -27.4698, lng: 153.0251, type: 'city', population: 2500000, minZoom: 2.5 },
   { name: 'Perth', lat: -31.9505, lng: 115.8605, type: 'city', population: 2100000, minZoom: 2.5 },
+
+  // Additional Tier 4 cities - better global coverage
+  // Americas
+  { name: 'Monterrey', lat: 25.6866, lng: -100.3161, type: 'city', population: 5300000, minZoom: 2.5 },
+  { name: 'Quito', lat: -0.1807, lng: -78.4678, type: 'city', population: 2800000, minZoom: 2.5 },
+  { name: 'Guadalajara', lat: 20.6597, lng: -103.3496, type: 'city', population: 5300000, minZoom: 2.5 },
+  { name: 'Panama City', lat: 8.9824, lng: -79.5199, type: 'city', population: 1500000, minZoom: 2.5 },
+  { name: 'San Juan', lat: 18.4655, lng: -66.1057, type: 'city', population: 320000, minZoom: 2.5 },
+  { name: 'Montevideo', lat: -34.9011, lng: -56.1645, type: 'city', population: 1900000, minZoom: 2.5 },
+  { name: 'Minneapolis', lat: 44.9778, lng: -93.2650, type: 'city', population: 430000, minZoom: 2.5 },
+  { name: 'Detroit', lat: 42.3314, lng: -83.0458, type: 'city', population: 640000, minZoom: 2.5 },
+  { name: 'Las Vegas', lat: 36.1699, lng: -115.1398, type: 'city', population: 650000, minZoom: 2.5 },
+  { name: 'Portland', lat: 45.5152, lng: -122.6784, type: 'city', population: 650000, minZoom: 2.5 },
+  { name: 'Nashville', lat: 36.1627, lng: -86.7816, type: 'city', population: 690000, minZoom: 2.5 },
+  { name: 'New Orleans', lat: 29.9511, lng: -90.0715, type: 'city', population: 390000, minZoom: 2.5 },
+  { name: 'Ottawa', lat: 45.4215, lng: -75.6972, type: 'city', population: 1000000, minZoom: 2.5 },
+  { name: 'Calgary', lat: 51.0447, lng: -114.0719, type: 'city', population: 1300000, minZoom: 2.5 },
+
+  // Europe
+  { name: 'Edinburgh', lat: 55.9533, lng: -3.1883, type: 'city', population: 520000, minZoom: 2.5 },
+  { name: 'Bucharest', lat: 44.4268, lng: 26.1025, type: 'city', population: 1800000, minZoom: 2.5 },
+  { name: 'Belgrade', lat: 44.7866, lng: 20.4489, type: 'city', population: 1400000, minZoom: 2.5 },
+  { name: 'Tbilisi', lat: 41.7151, lng: 44.8271, type: 'city', population: 1100000, minZoom: 2.5 },
+  { name: 'Riga', lat: 56.9496, lng: 24.1052, type: 'city', population: 630000, minZoom: 2.5 },
+  { name: 'Vilnius', lat: 54.6872, lng: 25.2797, type: 'city', population: 580000, minZoom: 2.5 },
+
+  // Middle East & Central Asia
+  { name: 'Beirut', lat: 33.8938, lng: 35.5018, type: 'city', population: 2400000, minZoom: 2.5 },
+  { name: 'Amman', lat: 31.9454, lng: 35.9284, type: 'city', population: 4000000, minZoom: 2.5 },
+  { name: 'Damascus', lat: 33.5138, lng: 36.2765, type: 'city', population: 2500000, minZoom: 2.5 },
+  { name: 'Muscat', lat: 23.5880, lng: 58.3829, type: 'city', population: 1500000, minZoom: 2.5 },
+  { name: 'Kuwait City', lat: 29.3759, lng: 47.9774, type: 'city', population: 2900000, minZoom: 2.5 },
+  { name: 'Kabul', lat: 34.5553, lng: 69.2075, type: 'city', population: 4600000, minZoom: 2.5 },
+  { name: 'Tashkent', lat: 41.2995, lng: 69.2401, type: 'city', population: 2600000, minZoom: 2.5 },
+  { name: 'Baku', lat: 40.4093, lng: 49.8671, type: 'city', population: 2300000, minZoom: 2.5 },
+
+  // Africa
+  { name: 'Abuja', lat: 9.0579, lng: 7.4951, type: 'city', population: 3500000, minZoom: 2.5 },
+  { name: 'Luanda', lat: -8.8390, lng: 13.2894, type: 'city', population: 8300000, minZoom: 2.5 },
+  { name: 'Maputo', lat: -25.9692, lng: 32.5732, type: 'city', population: 1100000, minZoom: 2.5 },
+  { name: 'Khartoum', lat: 15.5007, lng: 32.5599, type: 'city', population: 5700000, minZoom: 2.5 },
+  { name: 'Tunis', lat: 36.8065, lng: 10.1815, type: 'city', population: 2700000, minZoom: 2.5 },
+  { name: 'Dakar', lat: 14.7167, lng: -17.4677, type: 'city', population: 3900000, minZoom: 2.5 },
+  { name: 'Kampala', lat: 0.3476, lng: 32.5825, type: 'city', population: 3500000, minZoom: 2.5 },
+
+  // Asia-Pacific
+  { name: 'Phnom Penh', lat: 11.5564, lng: 104.9282, type: 'city', population: 2100000, minZoom: 2.5 },
+  { name: 'Colombo', lat: 6.9271, lng: 79.8612, type: 'city', population: 5600000, minZoom: 2.5 },
+  { name: 'Islamabad', lat: 33.6844, lng: 73.0479, type: 'city', population: 1100000, minZoom: 2.5 },
+  { name: 'Wuhan', lat: 30.5928, lng: 114.3055, type: 'city', population: 12300000, minZoom: 2.5 },
+  { name: 'Xi\'an', lat: 34.3416, lng: 108.9398, type: 'city', population: 13000000, minZoom: 2.5 },
+  { name: 'Surabaya', lat: -7.2575, lng: 112.7521, type: 'city', population: 3000000, minZoom: 2.5 },
+  { name: 'Busan', lat: 35.1796, lng: 129.0756, type: 'city', population: 3400000, minZoom: 2.5 },
+  { name: 'Wellington', lat: -41.2866, lng: 174.7756, type: 'city', population: 215000, minZoom: 2.5 },
 ]
 
 // Country centroids - visible at global view
@@ -173,6 +227,36 @@ export const COUNTRIES: GeoLabel[] = [
   { name: 'DR CONGO', lat: -4.0383, lng: 21.7587, type: 'country', minZoom: 2 },
   { name: 'MOROCCO', lat: 31.7917, lng: -7.0926, type: 'country', minZoom: 2 },
   { name: 'ALGERIA', lat: 28.0339, lng: 1.6596, type: 'country', minZoom: 2 },
+
+  // Additional countries
+  { name: 'BANGLADESH', lat: 23.685, lng: 90.3563, type: 'country', minZoom: 2.5 },
+  { name: 'MYANMAR', lat: 19.7633, lng: 96.0785, type: 'country', minZoom: 2.5 },
+  { name: 'AFGHANISTAN', lat: 33.9391, lng: 67.7100, type: 'country', minZoom: 2.5 },
+  { name: 'IRAQ', lat: 33.2232, lng: 43.6793, type: 'country', minZoom: 2 },
+  { name: 'SYRIA', lat: 34.8021, lng: 38.9968, type: 'country', minZoom: 2.5 },
+  { name: 'ISRAEL', lat: 31.0461, lng: 34.8516, type: 'country', minZoom: 2.5 },
+  { name: 'SUDAN', lat: 12.8628, lng: 30.2176, type: 'country', minZoom: 2 },
+  { name: 'TAIWAN', lat: 23.6978, lng: 120.9605, type: 'country', minZoom: 2.5 },
+  { name: 'NORTH KOREA', lat: 40.3399, lng: 127.5101, type: 'country', minZoom: 2.5 },
+  { name: 'GREECE', lat: 39.0742, lng: 21.8243, type: 'country', minZoom: 2.5 },
+  { name: 'SWEDEN', lat: 60.1282, lng: 18.6435, type: 'country', minZoom: 2.5 },
+  { name: 'NORWAY', lat: 60.472, lng: 8.4689, type: 'country', minZoom: 2.5 },
+  { name: 'FINLAND', lat: 61.9241, lng: 25.7482, type: 'country', minZoom: 2.5 },
+  { name: 'ROMANIA', lat: 45.9432, lng: 24.9668, type: 'country', minZoom: 2.5 },
+  { name: 'CUBA', lat: 21.5218, lng: -77.7812, type: 'country', minZoom: 2.5 },
+  { name: 'SOMALIA', lat: 5.1521, lng: 46.1996, type: 'country', minZoom: 2.5 },
+  { name: 'LIBYA', lat: 26.3351, lng: 17.2283, type: 'country', minZoom: 2 },
+  { name: 'TANZANIA', lat: -6.369, lng: 34.8888, type: 'country', minZoom: 2.5 },
+  { name: 'GHANA', lat: 7.9465, lng: -1.0232, type: 'country', minZoom: 2.5 },
+  { name: 'MOZAMBIQUE', lat: -18.6657, lng: 35.5296, type: 'country', minZoom: 2.5 },
+  { name: 'ANGOLA', lat: -11.2027, lng: 17.8739, type: 'country', minZoom: 2.5 },
+  { name: 'KAZAKHSTAN', lat: 48.0196, lng: 66.9237, type: 'country', minZoom: 2 },
+  { name: 'MONGOLIA', lat: 46.8625, lng: 103.8467, type: 'country', minZoom: 2 },
+  { name: 'NEW ZEALAND', lat: -40.9006, lng: 174.886, type: 'country', minZoom: 2 },
+  { name: 'ECUADOR', lat: -1.8312, lng: -78.1834, type: 'country', minZoom: 2.5 },
+  { name: 'BOLIVIA', lat: -16.2902, lng: -63.5887, type: 'country', minZoom: 2.5 },
+  { name: 'PARAGUAY', lat: -23.4425, lng: -58.4438, type: 'country', minZoom: 2.5 },
+  { name: 'URUGUAY', lat: -32.5228, lng: -55.7658, type: 'country', minZoom: 2.5 },
 ]
 
 // Ocean labels for context

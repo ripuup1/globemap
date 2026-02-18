@@ -152,14 +152,32 @@ function extractAndGeocode(text: string) {
 
 function detectCategory(title: string): EventType {
   const text = title.toLowerCase()
-  if (text.match(/\b(war|military|battle|invasion|airstrike|missile)\b/)) return 'armed-conflict'
-  if (text.match(/\b(terror|terrorist|isis|hamas|hezbollah)\b/)) return 'terrorism'
-  if (text.match(/\b(breaking|urgent)\b/)) return 'breaking'
-  if (text.match(/\b(election|president|congress|parliament|vote)\b/)) return 'politics'
-  if (text.match(/\b(championship|tournament|game|nfl|nba)\b/)) return 'sports'
-  if (text.match(/\b(stock|market|economy|billion|company)\b/)) return 'business'
-  if (text.match(/\b(ai|tech|software|apple|google|microsoft)\b/)) return 'technology'
-  if (text.match(/\b(earthquake|quake)\b/)) return 'earthquake'
+
+  // Conflict & Security
+  if (text.match(/\b(war|military|battle|invasion|airstrike|missile|troops|army|navy|drone strike|artillery|ceasefire|frontline|offensive|soldiers|armed forces|airforce|bombing raid|shelling)\b/)) return 'armed-conflict'
+  if (text.match(/\b(terror|terrorist|isis|hamas|hezbollah|al.?qaeda|jihadist|extremist|suicide bomb|car bomb|hostage|kidnap|militant attack)\b/)) return 'terrorism'
+  if (text.match(/\b(protest|riot|uprising|demonstrat|civil unrest|strike action|coup|revolution|clashes|tear gas|crackdown|dissent|rally against|march against)\b/)) return 'civil-unrest'
+
+  // Natural Disasters
+  if (text.match(/\b(earthquake|quake|seismic|tremor|aftershock|magnitude \d)\b/)) return 'earthquake'
+  if (text.match(/\b(volcano|eruption|volcanic|lava|magma|ash cloud|pyroclastic)\b/)) return 'volcano'
+  if (text.match(/\b(wildfire|bushfire|forest fire|blaze|wildland fire|fire season|acres burned)\b/)) return 'wildfire'
+  if (text.match(/\b(hurricane|typhoon|cyclone|tropical storm|tornado|blizzard|ice storm|derecho|wind damage)\b/)) return 'storm'
+  if (text.match(/\b(tsunami|tidal wave)\b/)) return 'tsunami'
+  if (text.match(/\b(flood|flooding|flash flood|inundation|levee|dam burst|mudslide|landslide)\b/)) return 'flood'
+  if (text.match(/\b(natural disaster|disaster relief|emergency response|fema|evacuation order|state of emergency)\b/)) return 'natural-disaster'
+
+  // News Categories
+  if (text.match(/\b(breaking|urgent|just in|developing story)\b/)) return 'breaking'
+  if (text.match(/\b(election|president|congress|parliament|vote|senator|governor|legislation|bill passed|supreme court|democrat|republican|prime minister|cabinet|diplomatic|treaty|sanctions|geopolitic|foreign policy|ambassador|nato|united nations)\b/)) return 'politics'
+  if (text.match(/\b(murder|arrest|suspect|convicted|sentenced|robbery|fraud|theft|shooting|stabbing|homicide|drug bust|cartel|smuggling|trafficking|prison|inmate|fbi|dea|interpol|indicted|charged with|manslaughter|assault|gang)\b/)) return 'crime'
+  if (text.match(/\b(championship|tournament|game|nfl|nba|mlb|nhl|soccer|football match|world cup|olympics|premier league|la liga|serie a|bundesliga|grand prix|formula 1|f1|tennis|golf|cricket|rugby|medal|playoff|mvp|transfer|signing|coach fired)\b/)) return 'sports'
+  if (text.match(/\b(stock|market|economy|billion|company|ipo|merger|acquisition|gdp|inflation|recession|earnings|revenue|profit|wall street|nasdaq|dow|s&p|fed rate|interest rate|trade deal|tariff|unemployment|bankruptcy|startup fund|venture capital)\b/)) return 'business'
+  if (text.match(/\b(ai|artificial intelligence|tech|software|apple|google|microsoft|meta|amazon|nvidia|openai|chatgpt|robot|chip|semiconductor|cybersecurity|hack|data breach|5g|quantum|startup|app launch|silicon valley|elon musk|spacex)\b/)) return 'technology'
+  if (text.match(/\b(health|medical|hospital|disease|virus|pandemic|vaccine|outbreak|cdc|who|cancer|surgery|clinical trial|drug approval|fda|mental health|obesity|diabetes|heart|stroke|infection|epidemic)\b/)) return 'health'
+  if (text.match(/\b(science|research|discovery|breakthrough|nasa|space|mars|moon|asteroid|comet|telescope|genome|dna|fossil|species|climate study|physics|particle|laboratory|experiment|published in)\b/)) return 'science'
+  if (text.match(/\b(movie|film|actor|actress|celebrity|oscar|grammy|emmy|album|concert|box office|streaming|netflix|disney|tv show|series|premiere|entertainment|music|singer|band|tour|festival|award show|red carpet|broadway|viral video)\b/)) return 'entertainment'
+
   return 'other'
 }
 

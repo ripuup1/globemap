@@ -140,8 +140,6 @@ interface GlobeComponentProps {
   isolatedEventIds?: string[] | null
   theme?: ThemeMode
   showLabels?: boolean
-  /** Callback when user clicks "Open in Situation Room" from cluster carousel */
-  onOpenClusterInSituationRoom?: (context: { regionName: string; eventIds: string[]; initialCategory?: string }) => void
 }
 
 // ============================================================================
@@ -177,7 +175,6 @@ function GlobeComponent({
   isolatedEventIds = null,
   theme = 'dark',
   showLabels = true,
-  onOpenClusterInSituationRoom,
 }: GlobeComponentProps) {
   const globeRef = useRef<any>(null)
   const isMobile = useIsMobile()
@@ -185,7 +182,6 @@ function GlobeComponent({
   // ========== STAGED LOADING STATE ==========
   const [markersReady, setMarkersReady] = useState(false)
   const [labelsReady, setLabelsReady] = useState(false)
-  const [bordersLoaded, setBordersLoaded] = useState(false)
   
   // Marker loading state
   const [visibleMarkers, setVisibleMarkers] = useState<GlobeMarker[]>([])
@@ -196,7 +192,6 @@ function GlobeComponent({
   const [cameraCenter, setCameraCenter] = useState<{ lat: number; lng: number }>({ lat: 20, lng: 0 })
   const pendingAltitudeRef = useRef(CONFIG.DEFAULT_ALTITUDE)
   const pendingCameraCenterRef = useRef<{ lat: number; lng: number }>({ lat: 20, lng: 0 })
-  const [countriesGeoJson, setCountriesGeoJson] = useState<any[]>([])
   const [openCluster, setOpenCluster] = useState<{ events: Event[], position: { lat: number, lng: number }, regionName: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
   
@@ -409,26 +404,12 @@ function GlobeComponent({
     onLoadingProgress?.(95, 'Labels ready')
   }, [markersReady, onLoadingProgress])
 
-  // STAGE 7: Load borders (desktop only)
+  // STAGE 7: Skip borders for performance (removed heavy GeoJSON polygon rendering)
   useEffect(() => {
-    if (!labelsReady || isMobile) {
-      if (labelsReady) {
-        onLoadingProgress?.(100, 'Complete')
-      }
-      return
+    if (labelsReady) {
+      onLoadingProgress?.(100, 'Complete')
     }
-    
-    fetch('https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson')
-      .then(r => r.json())
-      .then(d => { 
-        setCountriesGeoJson(d.features || [])
-        setBordersLoaded(true)
-        onLoadingProgress?.(100, 'Complete')
-      })
-      .catch(() => {
-        onLoadingProgress?.(100, 'Complete')
-      })
-  }, [labelsReady, isMobile, onLoadingProgress])
+  }, [labelsReady, onLoadingProgress])
 
   // ========== FLY TO ==========
   useEffect(() => {
@@ -566,12 +547,9 @@ function GlobeComponent({
       flex-direction: column;
       align-items: center;
       cursor: ${shouldHide ? 'default' : 'pointer'};
-      transform: translate(-50%, -100%) translateZ(0) scale(${shouldHide ? '0.3' : '1'});
       pointer-events: ${shouldHide ? 'none' : 'auto'};
       opacity: ${shouldHide ? '0' : '1'};
-      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-      will-change: transform, opacity;
-      backface-visibility: hidden;
+      transition: opacity 0.35s ease;
     `
 
     // Main badge - clean circular background
@@ -587,10 +565,7 @@ function GlobeComponent({
       align-items: center;
       justify-content: center;
       position: relative;
-      transition: border-width 0.15s ease, box-shadow 0.15s ease;
-      transform: translateZ(0);
-      will-change: transform;
-      backface-visibility: hidden;
+      transition: transform 0.15s ease, border-width 0.15s ease, box-shadow 0.15s ease;
     `
     
     // SVG icon - professional outline style
@@ -633,39 +608,20 @@ function GlobeComponent({
       badge.appendChild(countBadge)
     }
 
-    // Stem line
-    const stem = document.createElement('div')
-    stem.style.cssText = `
-      width: 1px;
-      height: ${Math.round(8 * markerScale)}px;
-      background: rgba(255,255,255,0.3);
-    `
-
-    // Ground dot
-    const dot = document.createElement('div')
-    dot.style.cssText = `
-      width: 3px;
-      height: 3px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.4);
-    `
-
     container.appendChild(badge)
-    container.appendChild(stem)
-    container.appendChild(dot)
 
-    // Hover effect (desktop only)
+    // Hover effect (desktop only) - scale badge, not container (container transform is managed by CSS2DRenderer)
     container.onmouseenter = () => {
       if (shouldHide) return
       badge.style.borderWidth = '2px'
       badge.style.boxShadow = `0 0 12px ${color}60`
-      container.style.transform = 'translate(-50%, -100%) translateZ(0) scale(1.05)'
+      badge.style.transform = 'scale(1.15)'
     }
     container.onmouseleave = () => {
       if (shouldHide) return
       badge.style.borderWidth = '1.5px'
       badge.style.boxShadow = '0 2px 8px rgba(0,0,0,0.4)'
-      container.style.transform = 'translate(-50%, -100%) translateZ(0) scale(1)'
+      badge.style.transform = 'scale(1)'
     }
 
     // ========== GESTURE-PRIORITY ARBITRATION ==========
@@ -760,33 +716,6 @@ function GlobeComponent({
   // ========== GRID LINES DATA ==========
   // Latitude/longitude grid lines (very subtle, opacity 0.05-0.10)
   // Format for react-globe.gl arcsData: { startLat, startLng, endLat, endLng }
-  const gridLinesData = useMemo(() => {
-    const lines: Array<{ startLat: number; startLng: number; endLat: number; endLng: number }> = []
-    
-    // Latitude lines (parallels) - every 30 degrees
-    for (let lat = -90; lat <= 90; lat += 30) {
-      if (lat === 0) continue // Skip equator (too prominent)
-      lines.push({
-        startLat: lat,
-        startLng: -180,
-        endLat: lat,
-        endLng: 180,
-      })
-    }
-    
-    // Longitude lines (meridians) - every 30 degrees  
-    for (let lng = -180; lng <= 180; lng += 30) {
-      if (lng === 0) continue // Skip prime meridian (too prominent)
-      lines.push({
-        startLat: -90,
-        startLng: lng,
-        endLat: 90,
-        endLng: lng,
-      })
-    }
-    
-    return lines
-  }, [])
 
   // ========== HTML DATA FOR GLOBE ==========
   const htmlData = useMemo(() => {
@@ -836,10 +765,10 @@ function GlobeComponent({
       <div 
         className="w-full h-full globe-container"
         style={{
-          transition: 'filter 0.3s ease-out',
-          filter: shouldBlur ? 'blur(4px) brightness(0.8)' : 'none',
-          background: theme === 'light' 
-            ? 'linear-gradient(135deg, #87ceeb, #add8e6)' 
+          transition: 'opacity 0.3s ease-out',
+          opacity: shouldBlur ? 0.6 : 1,
+          background: theme === 'light'
+            ? 'linear-gradient(135deg, #87ceeb, #add8e6)'
             : '#0a0a0a',
         }}
       >
@@ -847,27 +776,11 @@ function GlobeComponent({
           ref={globeRef}
           globeImageUrl={globeImage}
           backgroundImageUrl={bgImage}
-          polygonsData={bordersLoaded && !isGlobeMoving ? countriesGeoJson : []}
-          polygonCapColor={() => 'transparent'}
-          polygonSideColor={() => 'transparent'}
-          polygonStrokeColor={() => theme === 'light' 
-            ? 'rgba(100,116,139,0.25)'  // More visible in light mode
-            : 'rgba(148,163,184,0.15)'}  // Subtle but present in dark mode
-          polygonAltitude={0.001}
-          // Render borders at lower resolution during motion for performance
-          polygonResolution={isGlobeMoving ? 1 : 2}
-          arcsData={gridLinesData}
-          arcColor={() => theme === 'light' 
-            ? 'rgba(100,116,139,0.08)'  // Very subtle grid lines
-            : 'rgba(148,163,184,0.06)'}
-          arcStroke={0.5}
-          arcDashLength={1}
-          arcDashGap={2}
-          arcDashAnimateTime={0}
           htmlElementsData={htmlData}
           htmlLat={(d: any) => d.lat}
           htmlLng={(d: any) => d.lng}
-          htmlAltitude={(d: any) => d._type === 'label' ? 0.005 : 0.01}
+          htmlAltitude={(d: any) => d._type === 'label' ? 0.003 : 0.006}
+          htmlTransitionDuration={0}
           htmlElement={(d: any) => d._type === 'label' ? createLabelElement(d.label) : createMarkerElement(d)}
           enablePointerInteraction={!isDetailPanelOpen && !openCluster}
           atmosphereColor={theme === 'light' ? '#87ceeb' : '#3b5998'}
@@ -885,17 +798,6 @@ function GlobeComponent({
           onSelectEvent={(event) => {
             closeCluster()
             setTimeout(() => onMarkerClick?.(event), 50)
-          }}
-          onOpenInSituationRoom={(initialCategory) => {
-            // Open Situation Room with cluster context
-            if (onOpenClusterInSituationRoom) {
-              onOpenClusterInSituationRoom({
-                regionName: openCluster.regionName,
-                eventIds: openCluster.events.map(e => e.id),
-                initialCategory,
-              })
-            }
-            closeCluster()
           }}
           onClose={closeCluster}
         />

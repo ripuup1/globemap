@@ -85,22 +85,20 @@ function EventDetailPanel({
     }
   }, [eventProp])
 
-  // ESC key handler
+  // ESC key handler - only for closing the sources sub-modal
+  // Main panel close is handled by page.tsx's unified ESC handler
   useEffect(() => {
     if (!eventProp) return
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (showAllSources) {
-          setShowAllSources(false)
-        } else {
-          onClose()
-        }
+      if (e.key === 'Escape' && showAllSources) {
+        e.stopImmediatePropagation()
+        setShowAllSources(false)
       }
     }
     document.addEventListener('keydown', handleEscape)
     closeButtonRef.current?.focus()
     return () => document.removeEventListener('keydown', handleEscape)
-  }, [eventProp, onClose, showAllSources])
+  }, [eventProp, showAllSources])
 
   // Reset sources modal, wiki, and scroll position when event changes
   useEffect(() => {
@@ -225,7 +223,7 @@ function EventDetailPanel({
     
     // Quick bounding box filter first (roughly 500 miles = ~7 degrees)
     const latRange = 7
-    const lngRange = 7 / Math.cos(event.latitude * Math.PI / 180)
+    const lngRange = 7 / Math.cos(Math.min(Math.abs(event.latitude), 89) * Math.PI / 180)
     
     // Pre-filter by bounding box for performance
     const candidates = allEvents.filter(e => 
@@ -790,7 +788,7 @@ function EventDetailPanel({
               <div className="flex items-center gap-2">
                 <span className="text-lg">📚</span>
                 <span className="text-sm font-medium text-white">Learn More</span>
-                <span className="text-[10px] text-gray-500">via Wikipedia</span>
+                <span className="text-[10px] text-gray-500">via Grokipedia</span>
               </div>
               <svg 
                 className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${showWiki ? 'rotate-180' : ''}`}
@@ -837,7 +835,7 @@ function EventDetailPanel({
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-xs font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
                     >
-                      Read full article on Wikipedia
+                      Read full article on Grokipedia
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                       </svg>
@@ -914,6 +912,7 @@ function EventDetailPanel({
               <button
                 onClick={() => setShowAllSources(false)}
                 className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all hover:rotate-90"
+                aria-label="Close sources modal"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

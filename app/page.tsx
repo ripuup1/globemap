@@ -19,14 +19,9 @@ import LoadingOverlay from '@/components/UI/LoadingOverlay'
 import ErrorBoundary from '@/components/UI/ErrorBoundary'
 import EventDetailPanel from '@/components/UI/EventDetailPanel'
 import SatelliteControlPanel, { ExtendedFilterState } from '@/components/UI/SatelliteControlPanel'
-import SituationRoom from '@/components/UI/SituationRoom'
-import OrbitalCommand from '@/components/UI/OrbitalCommand'
-import SituationRing from '@/components/UI/SituationRing'
-import InformationHubIcon from '@/components/UI/InformationHubIcon'
 import InteractionHintModal from '@/components/UI/InteractionHintModal'
 import VoxTerraLogo from '@/components/UI/VoxTerraLogo'
 import ThemeToggle, { ThemeMode } from '@/components/UI/ThemeToggle'
-import { isCapitalContextEvent } from '@/data/capitals'
 import { balanceCategories } from '@/utils/categoryBalance'
 import { extractCountriesFromEvents } from '@/utils/countryExtractor'
 import { calculateDistance } from '@/utils/geo'
@@ -264,7 +259,6 @@ export default function HomePage() {
   const [timeRange, setTimeRange] = useState('all')
   const [globeZoom, setGlobeZoom] = useState<number>(1.0)
   const [globeAltitude, setGlobeAltitude] = useState<number>(2.5)
-  const [showHint, setShowHint] = useState(true)
   const [showInteractionHint, setShowInteractionHint] = useState(false)
   const [showInfoModal, setShowInfoModal] = useState(false)
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false)
@@ -301,15 +295,10 @@ export default function HomePage() {
   
   // Settings panel open state (for blur)
   const [isSettingsPanelOpen, setIsSettingsPanelOpen] = useState(false)
-  
-  // Situation Room state
-  const [isSituationRoomOpen, setIsSituationRoomOpen] = useState(false)
-  const [situationRoomCountry, setSituationRoomCountry] = useState<string | null>(null)
-  const [situationRoomClusterContext, setSituationRoomClusterContext] = useState<{
-    regionName: string
-    eventIds: string[]
-    initialCategory?: string
-  } | null>(null)
+
+  // Ref for current selectedEvent to avoid stale closures in navigateToEvent
+  const selectedEventRef = useRef<Event | null>(null)
+  selectedEventRef.current = selectedEvent
   
   // Theme state (dark/light mode)
   const [theme, setTheme] = useState<ThemeMode>('dark')
@@ -331,8 +320,12 @@ export default function HomePage() {
 
   // Load persisted theme on mount (prevents flash when ThemeToggle reads localStorage)
   useEffect(() => {
-    const stored = localStorage.getItem('voxtera-theme') as ThemeMode | null
-    if (stored) setTheme(stored)
+    try {
+      const stored = localStorage.getItem('voxtera-theme') as ThemeMode | null
+      if (stored) setTheme(stored)
+    } catch {
+      // Storage disabled or unavailable
+    }
   }, [])
 
   // Memoized event filtering for performance - includes country and distance filters
@@ -360,31 +353,29 @@ export default function HomePage() {
         const eventType = (event.type || '').toLowerCase().replace('-', ' ')
         const source = (event.source || '').toLowerCase()
         const continent = (event.metadata?.continent as string || '').toLowerCase()
-        
+
         // Combined searchable text
         const searchableText = `${title} ${description} ${location} ${country} ${eventType} ${source} ${continent}`
-        
+
         // Direct match first
-        if (searchableText.includes(query)) {
-          return true
-        }
-        
-        // Synonym expansion - check if query matches any synonym key
-        const synonymKeys = Object.keys(SEARCH_SYNONYMS)
-        for (const key of synonymKeys) {
-          // If query matches a key or any of its synonyms
-          const synonyms = SEARCH_SYNONYMS[key]
-          const allTerms = [key, ...synonyms]
-          
-          if (allTerms.some(term => query.includes(term) || term.includes(query))) {
-            // Check if event matches any of the expanded terms
-            if (allTerms.some(term => searchableText.includes(term))) {
-              return true
+        let matchesSearch = searchableText.includes(query)
+
+        // Synonym expansion if no direct match
+        if (!matchesSearch) {
+          const synonymKeys = Object.keys(SEARCH_SYNONYMS)
+          for (const key of synonymKeys) {
+            const synonyms = SEARCH_SYNONYMS[key]
+            const allTerms = [key, ...synonyms]
+            if (allTerms.some(term => query.includes(term) || term.includes(query))) {
+              if (allTerms.some(term => searchableText.includes(term))) {
+                matchesSearch = true
+                break
+              }
             }
           }
         }
-        
-        return false
+
+        if (!matchesSearch) return false
       }
 
       // Category/Event Type filter - filter by selected categories
@@ -438,12 +429,12 @@ export default function HomePage() {
   }, [filteredEvents])
   
   // ========== DYNAMIC COUNTRY OPTIONS ==========
-  // Extract countries from events for filtering
+  // Extract countries from ALL events (not filteredEvents) to break circular dependency
   const countryOptions = useMemo(() => {
-    return extractCountriesFromEvents(filteredEvents)
-  }, [filteredEvents])
-  
-  // Create country keywords map for filtering
+    return extractCountriesFromEvents(events)
+  }, [events])
+
+  // Create country keywords map for filtering (from all events, not filtered)
   const COUNTRY_KEYWORDS_MAP = useMemo(() => {
     const map: Record<string, string[]> = {}
     countryOptions.forEach(country => {
@@ -482,80 +473,10 @@ export default function HomePage() {
     return matchingIds
   }, [events, filters.selectedCountries, COUNTRY_KEYWORDS_MAP])
 
-  // ========== GEO VS NON-GEO EVENT SEPARATION ==========
-  // Maps show WHERE. Sidebars show WHAT.
-  // Non-geo and capital-context events go to Situation Room only.
-  const { geoEvents, situationRoomEvents } = useMemo(() => {
-    const geo: Event[] = []
-    const situation: Event[] = []
-    
-    balancedEvents.forEach(event => {
-      // Events without coordinates go to Situation Room
-      if (!event.latitude || !event.longitude) {
-        situation.push(event)
-        return
-      }
-      
-      // Capital context events (national-level news at capitals) 
-      // go to BOTH map (as capital marker) and Situation Room
-      if (isCapitalContextEvent(event)) {
-        situation.push(event)
-        // Still add to geo if it has specific location relevance
-        const hasSpecificLocation = event.metadata?.locationName && 
-          !['white house', 'congress', 'kremlin', 'parliament'].some(
-            g => (event.metadata?.locationName as string || '').toLowerCase().includes(g)
-          )
-        if (hasSpecificLocation) {
-          geo.push(event)
-        }
-      } else {
-        // Pure geographic events
-        geo.push(event)
-      }
-    })
-    
-    return { geoEvents: geo, situationRoomEvents: situation }
+  // All balanced events with coordinates go to the globe
+  const geoEvents = useMemo(() => {
+    return balancedEvents.filter(event => event.latitude && event.longitude)
   }, [balancedEvents])
-
-  // Category counts for Situation Ring - counts geoEvents (visible on map)
-  const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = {
-      markets: 0,
-      economy: 0,
-      politics: 0,
-      security: 0,
-      technology: 0,
-      energy: 0,
-      climate: 0,
-      diplomacy: 0,
-      health: 0,
-    }
-    
-    const typeMap: Record<string, string> = {
-      'business': 'markets',
-      'armed-conflict': 'security',
-      'terrorism': 'security',
-      'crime': 'security',
-      'civil-unrest': 'security',
-      'earthquake': 'climate',
-      'volcano': 'climate',
-      'wildfire': 'climate',
-      'storm': 'climate',
-      'tsunami': 'climate',
-      'flood': 'climate',
-      'science': 'technology',
-    }
-    
-    // Count only geoEvents (events with coordinates visible on map)
-    geoEvents.forEach(event => {
-      const channel = typeMap[event.type] || event.type
-      if (counts[channel] !== undefined) {
-        counts[channel]++
-      }
-    })
-    
-    return counts
-  }, [geoEvents])
 
   // Optimized zoom handler with debouncing
   // Also estimates altitude for ISS positioning (altitude ≈ 5 / zoom for our globe config)
@@ -643,11 +564,12 @@ export default function HomePage() {
   }, [])
 
   // Navigate to a specific event (used by related events drill-down)
+  // Uses selectedEventRef to avoid stale closure during fly-to animation
   const navigateToEvent = useCallback((event: Event, addToHistory: boolean = true) => {
-    if (addToHistory && selectedEvent) {
-      setEventHistory(prev => [...prev, selectedEvent])
+    if (addToHistory && selectedEventRef.current) {
+      setEventHistory(prev => [...prev, selectedEventRef.current!])
     }
-    
+
     // Fly to the event
     setFlyToTarget({
       lat: event.latitude,
@@ -655,7 +577,7 @@ export default function HomePage() {
       onComplete: () => {
         // Select the event after arriving
         setSelectedEvent(event)
-        
+
         // Pulse the target marker
         const marker = document.querySelector(`[data-event-id="${event.id}"]`)
         if (marker) {
@@ -664,7 +586,7 @@ export default function HomePage() {
         }
       }
     })
-  }, [selectedEvent])
+  }, [])
 
   // Go back in event history
   const goBackInHistory = useCallback(() => {
@@ -689,7 +611,11 @@ export default function HomePage() {
       
       // Escape closes panels or clears search or exits category browse mode
       if (e.key === 'Escape') {
-        if (categoryBrowseMode) {
+        if (showInfoModal) {
+          setShowInfoModal(false)
+        } else if (showShortcutsHelp) {
+          setShowShortcutsHelp(false)
+        } else if (categoryBrowseMode) {
           exitCategoryBrowseMode()
         } else if (selectedEvent) {
           // Check if we have history to go back to
@@ -767,7 +693,7 @@ export default function HomePage() {
 
     window.addEventListener('keydown', handleKeyPress)
     return () => window.removeEventListener('keydown', handleKeyPress)
-  }, [selectedEvent, searchQuery, categoryBrowseMode, eventHistory, exitCategoryBrowseMode, navigateCategoryPin, goBackInHistory])
+  }, [selectedEvent, searchQuery, categoryBrowseMode, eventHistory, exitCategoryBrowseMode, navigateCategoryPin, goBackInHistory, showInfoModal, showShortcutsHelp])
 
   // Memoized highlighted event IDs for Globe (avoids new array ref each render)
   const highlightedEventIds = useMemo(() =>
@@ -775,26 +701,6 @@ export default function HomePage() {
     [categoryBrowseMode]
   )
 
-  // Memoized callbacks for SituationRoom (avoids re-renders of heavy component)
-  const handleSituationRoomClose = useCallback(() => {
-    setIsSituationRoomOpen(false)
-    setSituationRoomCountry(null)
-    setSituationRoomClusterContext(null)
-  }, [])
-
-  const handleSituationRoomEventClick = useCallback((event: Event) => {
-    if (event.latitude && event.longitude) {
-      setFlyToTarget({ lat: event.latitude, lng: event.longitude })
-      setSelectedEvent(event)
-      setIsSituationRoomOpen(false)
-    }
-  }, [])
-
-  // Memoized callback for Globe cluster opening
-  const handleOpenClusterInSituationRoom = useCallback((context: { regionName: string; eventIds: string[]; initialCategory?: string }) => {
-    setSituationRoomClusterContext(context)
-    setIsSituationRoomOpen(true)
-  }, [])
 
   // Memoized search suggestions (avoids recalculating inline IIFE every render)
   const searchSuggestions = useMemo(() => {
@@ -962,7 +868,7 @@ export default function HomePage() {
   }, [degradedMode, events.length])
 
   return (
-    <ErrorBoundary event={null}>
+    <ErrorBoundary event={selectedEvent}>
       {/* ERROR STATE: Show reload option if loading fails */}
       {hasError && (
         <div className="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center p-8">
@@ -1042,13 +948,15 @@ export default function HomePage() {
           }}
         />
 
-        {/* Loading Overlay */}
-        <LoadingOverlay
-          loading={loading}
-          processing={processing}
-          progress={loadingProgress}
-          message={loading ? 'Fetching events...' : processing ? 'Processing data...' : undefined}
-        />
+        {/* Loading Overlay - only rendered when active */}
+        {(loading || processing) && (
+          <LoadingOverlay
+            loading={loading}
+            processing={processing}
+            progress={loadingProgress}
+            message={loading ? 'Fetching events...' : 'Processing data...'}
+          />
+        )}
 
         {/* Main Globe Container - blurs when any panel is open */}
         <div className="absolute inset-0">
@@ -1060,14 +968,13 @@ export default function HomePage() {
             processing={processing}
             onZoomChange={handleZoomChange}
             isDetailPanelOpen={!!selectedEvent}
-            isSettingsPanelOpen={isSettingsPanelOpen || isSituationRoomOpen}
+            isSettingsPanelOpen={isSettingsPanelOpen}
             isModalOpen={showInfoModal || showShortcutsHelp}
             flyToTarget={flyToTarget}
             highlightedEventIds={highlightedEventIds}
             isolatedEventIds={isolatedEventIds}
             theme={theme}
             showLabels={true}
-            onOpenClusterInSituationRoom={handleOpenClusterInSituationRoom}
           />
         </div>
 
@@ -1075,7 +982,7 @@ export default function HomePage() {
         <SatelliteControlPanel
           filters={filters}
           onFiltersChange={handleFiltersChange}
-          events={filteredEvents}
+          events={events}
           timeRange={timeRange}
           onTimeRangeChange={setTimeRange}
           zoomLevel={globeZoom}
@@ -1084,65 +991,6 @@ export default function HomePage() {
           onSettingsOpenChange={setIsSettingsPanelOpen}
         />
 
-        {/* Orbital Command Hub with Situation Ring */}
-        {!isSituationRoomOpen && !isMobile && (
-          <div 
-            className="fixed bottom-8 left-8 z-40 flex flex-col items-center"
-            style={{ pointerEvents: 'none' }}
-          >
-            {/* Situation Ring - orbits around the hub */}
-            <div style={{ pointerEvents: 'auto' }}>
-              <SituationRing
-                categoryCounts={categoryCounts}
-                size={220}
-                onCategoryClick={(categoryId) => {
-                  setIsSituationRoomOpen(true)
-                }}
-                animated={!isSettingsPanelOpen}
-              />
-            </div>
-            
-            {/* Orbital Command at center */}
-            <div 
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
-              style={{ pointerEvents: 'auto' }}
-            >
-              <OrbitalCommand
-                size={90}
-                animated={!isSettingsPanelOpen}
-                onClick={() => setIsSituationRoomOpen(true)}
-                theme={theme}
-              />
-            </div>
-            
-            {/* Label */}
-            <div 
-              className="mt-2 text-[9px] uppercase tracking-widest text-center"
-              style={{ color: 'rgba(255,255,255,0.3)', pointerEvents: 'none' }}
-            >
-              Intelligence Hub
-            </div>
-          </div>
-        )}
-
-        {/* Mobile: Information Hub Icon (top-right) - replaces orbital */}
-        {!isSituationRoomOpen && isMobile && (
-          <InformationHubIcon
-            onClick={() => setIsSituationRoomOpen(true)}
-            animated={true}
-            position="top-right"
-          />
-        )}
-
-        {/* Situation Room Sidebar */}
-        <SituationRoom
-          events={situationRoomEvents}
-          isOpen={isSituationRoomOpen}
-          onClose={handleSituationRoomClose}
-          onEventClick={handleSituationRoomEventClick}
-          selectedCountry={situationRoomCountry}
-          clusterContext={situationRoomClusterContext}
-        />
 
         {/* Event Detail Panel - Full-screen slide-in with drill-down support */}
         {selectedEvent && (
@@ -1307,6 +1155,7 @@ export default function HomePage() {
                 <button
                   onClick={() => setSearchQuery('')}
                   className="text-gray-500 hover:text-white transition-colors p-1 rounded hover:bg-white/5"
+                  aria-label="Clear search"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

@@ -60,16 +60,18 @@ function OrbitalCommand({
   const innerSize = size * 0.4
 
   return (
-    <div 
+    <div
       className="relative cursor-pointer transition-transform hover:scale-105"
-      style={{ 
-        width: size, 
-        height: size * 0.5, 
+      style={{
+        width: size,
+        height: size * 0.5,
         opacity,
       }}
       onClick={onClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.() } }}
       role="button"
-      aria-label="Orbital Command Hub"
+      tabIndex={0}
+      aria-label="Open Intelligence Hub"
     >
       {/* Outer ring - scanning effect */}
       <div 

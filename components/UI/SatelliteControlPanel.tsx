@@ -117,11 +117,11 @@ function SatelliteControlPanel({
     const handleKey = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement).tagName === 'INPUT') return
       if (e.key === 's' || e.key === 'S') { e.preventDefault(); setIsExpanded(p => !p) }
-      if (e.key === 'Escape') setIsExpanded(false)
+      if (e.key === 'Escape' && isExpanded) { e.stopImmediatePropagation(); setIsExpanded(false) }
     }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
-  }, [])
+  }, [isExpanded])
   
   // FIX #3: Swipe-to-dismiss for mobile settings panel
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -302,12 +302,30 @@ function SatelliteControlPanel({
   }, [filters, onFiltersChange, userLocation, distanceRadius, showDistances])
 
   // Calculate stats
-  const categoryStats = useMemo(() => 
+  const categoryStats = useMemo(() =>
     events.reduce((acc, e) => {
       acc[e.type] = (acc[e.type] || 0) + 1
       return acc
     }, {} as Record<string, number>)
   , [events])
+
+  // Pre-compute country event counts (avoids O(n*m) in render loop)
+  const countryEventCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const option of countryOptions) {
+      let count = 0
+      for (const e of events) {
+        const eventCountry = (e.metadata?.country as string || '').toLowerCase()
+        const eventLocation = (e.metadata?.locationName as string || '').toLowerCase()
+        const searchText = `${eventCountry} ${eventLocation}`
+        if (option.keywords.some(kw => searchText.includes(kw))) {
+          count++
+        }
+      }
+      counts.set(option.value, count)
+    }
+    return counts
+  }, [events, countryOptions])
 
   // Filter events by country
   const filteredByCountry = useMemo(() => {
@@ -476,13 +494,7 @@ function SatelliteControlPanel({
                 <div className="grid grid-cols-2 gap-1.5">
                   {countryOptions.map(country => {
                     const isSelected = selectedCountries.includes(country.value)
-                    // Match filter logic - use keywords for accurate counting
-                    const count = events.filter(e => {
-                      const eventCountry = (e.metadata?.country as string || '').toLowerCase()
-                      const eventLocation = (e.metadata?.locationName as string || '').toLowerCase()
-                      const searchText = `${eventCountry} ${eventLocation}`
-                      return country.keywords.some(kw => searchText.includes(kw))
-                    }).length
+                    const count = countryEventCounts.get(country.value) || 0
                     return (
                       <button
                         key={country.value}
@@ -608,7 +620,7 @@ function SatelliteControlPanel({
                     .slice(0, 6)
                     .map(([type, count]) => {
                       const color = getCategoryColor(type as EventType)
-                      const pct = Math.round((count / events.length) * 100)
+                      const pct = events.length > 0 ? Math.round((count / events.length) * 100) : 0
                       return (
                         <div key={type} className="flex items-center gap-2">
                           <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
@@ -779,10 +791,15 @@ interface AccordionSectionProps {
 }
 
 function AccordionSection({ title, isOpen, onToggle, badge, children }: AccordionSectionProps) {
+  const sectionId = title.toLowerCase().replace(/\s+/g, '-')
+  const panelId = `accordion-panel-${sectionId}`
+
   return (
     <div className="border-b border-white/5 last:border-b-0">
       <button
         onClick={onToggle}
+        aria-expanded={isOpen}
+        aria-controls={panelId}
         className="w-full flex items-center justify-between px-5 py-3.5 text-left hover:bg-white/5 transition-colors"
       >
         <div className="flex items-center gap-2.5">
@@ -791,14 +808,19 @@ function AccordionSection({ title, isOpen, onToggle, badge, children }: Accordio
             <span className="bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded-full font-semibold">{badge}</span>
           )}
         </div>
-        <svg 
+        <svg
           className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
           fill="none" viewBox="0 0 24 24" stroke="currentColor"
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
-      <div className={`overflow-hidden transition-all duration-200 ease-out ${isOpen ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'}`}>
+      <div
+        id={panelId}
+        role="region"
+        aria-labelledby={`accordion-btn-${sectionId}`}
+        className={`overflow-hidden transition-all duration-200 ease-out ${isOpen ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'}`}
+      >
         <div className="px-5 pb-4">{children}</div>
       </div>
     </div>

@@ -32,29 +32,6 @@ function MarketCarousel({ markets, onMarketChange }: MarketCarouselProps) {
   const [scrollLeft, setScrollLeft] = useState(0)
   const carouselRef = useRef<HTMLDivElement>(null)
 
-  // Keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') {
-        e.preventDefault()
-        goToPrevious()
-      } else if (e.key === 'ArrowRight') {
-        e.preventDefault()
-        goToNext()
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [currentIndex])
-
-  // Notify parent of market change
-  useEffect(() => {
-    if (markets[currentIndex] && onMarketChange) {
-      onMarketChange(markets[currentIndex])
-    }
-  }, [currentIndex, markets, onMarketChange])
-
   const goToNext = useCallback(() => {
     setCurrentIndex(prev => (prev + 1) % markets.length)
   }, [markets.length])
@@ -62,6 +39,24 @@ function MarketCarousel({ markets, onMarketChange }: MarketCarouselProps) {
   const goToPrevious = useCallback(() => {
     setCurrentIndex(prev => (prev - 1 + markets.length) % markets.length)
   }, [markets.length])
+
+  // Keyboard navigation - only when carousel is focused (not global)
+  const handleCarouselKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault()
+      goToPrevious()
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault()
+      goToNext()
+    }
+  }, [goToPrevious, goToNext])
+
+  // Notify parent of market change
+  useEffect(() => {
+    if (markets[currentIndex] && onMarketChange) {
+      onMarketChange(markets[currentIndex])
+    }
+  }, [currentIndex, markets, onMarketChange])
 
   // Touch/swipe handlers
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -175,7 +170,11 @@ function MarketCarousel({ markets, onMarketChange }: MarketCarouselProps) {
       {/* Market cards carousel */}
       <div
         ref={carouselRef}
-        className="flex gap-3 overflow-x-auto scrollbar-hide"
+        className="flex gap-3 overflow-x-auto scrollbar-hide focus:outline-none"
+        tabIndex={0}
+        onKeyDown={handleCarouselKeyDown}
+        role="region"
+        aria-label="Market indices carousel"
         style={{
           scrollSnapType: 'x mandatory',
           scrollBehavior: 'smooth',

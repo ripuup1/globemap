@@ -131,16 +131,30 @@ export function normalizeGoogleNewsArticle(
   const text = searchText.toLowerCase()
   let eventType: string = 'other'
 
-  if (text.match(/\b(breaking|urgent|alert)\b/)) eventType = 'breaking'
-  else if (text.match(/\b(politics|election|government|president|prime minister)\b/)) eventType = 'politics'
-  else if (text.match(/\b(economy|finance|market|gdp|inflation|trade)\b/)) eventType = 'business'
-  else if (text.match(/\b(technology|tech|ai|software|digital)\b/)) eventType = 'technology'
-  else if (text.match(/\b(science|research|discovery|breakthrough)\b/)) eventType = 'science'
-  else if (text.match(/\b(sports|sport|football|soccer|basketball)\b/)) eventType = 'sports'
-  else if (text.match(/\b(health|medical|hospital|disease|virus)\b/)) eventType = 'health'
-  else if (text.match(/\b(climate|weather|flood|drought|wildfire)\b/)) eventType = 'climate'
-  else if (text.match(/\b(earthquake|quake|seismic)\b/)) eventType = 'earthquake'
-  else if (text.match(/\b(conflict|war|military|attack)\b/)) eventType = 'armed-conflict'
+  // Conflict & Security
+  if (text.match(/\b(war|military|battle|invasion|airstrike|missile|troops|army|drone strike|artillery|ceasefire|offensive|soldiers|armed forces|bombing raid|shelling)\b/)) eventType = 'armed-conflict'
+  else if (text.match(/\b(terror|terrorist|isis|hamas|hezbollah|al.?qaeda|jihadist|extremist|suicide bomb|car bomb|hostage|militant attack)\b/)) eventType = 'terrorism'
+  else if (text.match(/\b(protest|riot|uprising|demonstrat|civil unrest|strike action|coup|revolution|clashes|tear gas|crackdown|rally against|march against)\b/)) eventType = 'civil-unrest'
+
+  // Natural Disasters
+  else if (text.match(/\b(earthquake|quake|seismic|tremor|aftershock|magnitude \d)\b/)) eventType = 'earthquake'
+  else if (text.match(/\b(volcano|eruption|volcanic|lava|ash cloud|pyroclastic)\b/)) eventType = 'volcano'
+  else if (text.match(/\b(wildfire|bushfire|forest fire|blaze|acres burned|fire season)\b/)) eventType = 'wildfire'
+  else if (text.match(/\b(hurricane|typhoon|cyclone|tropical storm|tornado|blizzard|ice storm|derecho)\b/)) eventType = 'storm'
+  else if (text.match(/\b(tsunami|tidal wave)\b/)) eventType = 'tsunami'
+  else if (text.match(/\b(flood|flooding|flash flood|inundation|dam burst|mudslide|landslide)\b/)) eventType = 'flood'
+  else if (text.match(/\b(natural disaster|disaster relief|emergency response|evacuation order|state of emergency)\b/)) eventType = 'natural-disaster'
+
+  // News Categories
+  else if (text.match(/\b(breaking|urgent|alert|just in|developing story)\b/)) eventType = 'breaking'
+  else if (text.match(/\b(election|president|congress|parliament|vote|senator|governor|legislation|supreme court|democrat|republican|prime minister|cabinet|diplomatic|treaty|sanctions|foreign policy|ambassador|nato|united nations|politics|government)\b/)) eventType = 'politics'
+  else if (text.match(/\b(murder|arrest|suspect|convicted|sentenced|robbery|fraud|theft|shooting|stabbing|homicide|drug bust|cartel|smuggling|trafficking|prison|fbi|interpol|indicted|charged with|manslaughter|assault|gang)\b/)) eventType = 'crime'
+  else if (text.match(/\b(championship|tournament|nfl|nba|mlb|nhl|soccer|football match|world cup|olympics|premier league|la liga|serie a|bundesliga|grand prix|formula 1|f1|tennis|golf|cricket|rugby|medal|playoff|mvp|transfer|sports|sport|basketball)\b/)) eventType = 'sports'
+  else if (text.match(/\b(stock|market|economy|billion|company|ipo|merger|acquisition|gdp|inflation|recession|earnings|revenue|profit|wall street|nasdaq|dow|fed rate|interest rate|tariff|unemployment|bankruptcy|finance|trade deal|venture capital)\b/)) eventType = 'business'
+  else if (text.match(/\b(ai|artificial intelligence|tech|software|apple|google|microsoft|meta|amazon|nvidia|openai|chatgpt|robot|semiconductor|cybersecurity|hack|data breach|5g|quantum|startup|silicon valley|elon musk|spacex|technology|digital)\b/)) eventType = 'technology'
+  else if (text.match(/\b(health|medical|hospital|disease|virus|pandemic|vaccine|outbreak|cdc|who|cancer|surgery|clinical trial|drug approval|fda|mental health|infection|epidemic)\b/)) eventType = 'health'
+  else if (text.match(/\b(science|research|discovery|breakthrough|nasa|space|mars|moon|asteroid|telescope|genome|dna|fossil|climate study|physics|laboratory|experiment)\b/)) eventType = 'science'
+  else if (text.match(/\b(movie|film|actor|actress|celebrity|oscar|grammy|emmy|album|concert|box office|streaming|netflix|disney|tv show|premiere|entertainment|music|singer|band|tour|festival|award show|broadway|viral video)\b/)) eventType = 'entertainment'
 
   // Override with provided category if available
   if (category && category !== 'breaking') {

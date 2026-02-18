@@ -55,7 +55,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     if (this.state.hasError && this.state.error) {
       // Use custom fallback if provided
       if (this.props.fallback) {
-        return this.props.fallback(this.state.error, this.state.errorInfo!, this.props.event)
+        return this.props.fallback(this.state.error, this.state.errorInfo as ErrorInfo, this.props.event)
       }
 
       // Default fallback: show raw JSON

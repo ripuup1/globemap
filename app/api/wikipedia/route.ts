@@ -1,13 +1,13 @@
 /**
- * Vox Terra - Wikipedia API Integration
- * 
- * Option 6C: Hybrid Content-Aware Linking with Confidence Scoring
- * 
- * Links Wikipedia articles based on EVENT CONTENT, not location:
- * - Extracts key entities from title/description
- * - Scores relevance using multiple signals
- * - Only returns link if confidence threshold met
- * - Falls back gracefully when no good match
+ * Vox Terra - Grokipedia API Integration
+ *
+ * Content-aware article linking with confidence scoring.
+ * Uses Wikipedia search API for entity resolution, then links to Grokipedia.
+ *
+ * Strategy:
+ * 1. Search full title first (most accurate)
+ * 2. Fall back to extracted entities if full title fails
+ * 3. Link to Grokipedia article page
  */
 
 import { NextResponse } from 'next/server'
@@ -175,90 +175,89 @@ export async function GET(request: Request) {
   }
   
   try {
-    // Extract entities from the event title for content-aware search
+    // Build search queries: full title first (most accurate), then extracted entities
     const entities = extractEntities(title || query, eventType || undefined)
-    
-    // Try each entity in order of specificity
-    const searchQueries = entities.length > 0 ? entities : [query]
-    
+    const searchQueries = [title || query, ...entities].filter(Boolean) as string[]
+    // Deduplicate while preserving order
+    const uniqueQueries = [...new Set(searchQueries.map(q => q.trim()))].slice(0, 4)
+
     let bestResult: { data: WikipediaSummary; confidence: number } | null = null
-    
-    for (const searchQuery of searchQueries.slice(0, 3)) { // Limit to top 3 entities
+
+    for (const searchQuery of uniqueQueries) {
       const controller = new AbortController()
       const timeout = setTimeout(() => controller.abort(), 4000)
-      
+
       try {
-        // Search Wikipedia
-        const searchApiUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchQuery)}&format=json&srlimit=3`
-        
+        // Search Wikipedia for entity resolution
+        const searchApiUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchQuery)}&format=json&srlimit=5`
+
         const searchResponse = await fetch(searchApiUrl, {
           signal: controller.signal,
           headers: {
             'User-Agent': 'VoxTerra/1.0 (https://voxtera.app; contact@voxtera.app)',
           },
         })
-        
+
         clearTimeout(timeout)
-        
+
         if (!searchResponse.ok) continue
-        
+
         const searchData = await searchResponse.json()
         const results: SearchResult[] = searchData?.query?.search || []
-        
-        // Score each result and find best match
+
+        // Score each result against the ORIGINAL title (not just the search fragment)
         for (const result of results) {
-          const confidence = calculateConfidence(searchQuery, result, eventType || undefined)
-          
+          const confidence = calculateConfidence(title || query, result, eventType || undefined)
+
           if (confidence >= CONFIDENCE_THRESHOLD && (!bestResult || confidence > bestResult.confidence)) {
-            // Fetch full summary for this result
+            // Fetch summary from Wikipedia
             const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(result.title)}`
             const summaryResponse = await fetch(summaryUrl, {
               headers: {
                 'User-Agent': 'VoxTerra/1.0 (https://voxtera.app; contact@voxtera.app)',
               },
             })
-            
+
             if (summaryResponse.ok) {
               const summaryData: WikipediaSummary = await summaryResponse.json()
               bestResult = { data: summaryData, confidence }
             }
           }
         }
-        
+
         // If we found a high-confidence match, stop searching
         if (bestResult && bestResult.confidence >= 60) break
-        
+
       } catch {
-        // Continue to next entity on timeout/error
+        // Continue to next query on timeout/error
         continue
       }
     }
-    
-    // Return best result if found
+
+    // Return best result with Grokipedia link
     if (bestResult) {
+      const grokipediaTitle = bestResult.data.title.replace(/ /g, '_')
       return NextResponse.json({
         title: bestResult.data.title,
         summary: bestResult.data.extract,
         thumbnail: bestResult.data.thumbnail?.source,
-        url: bestResult.data.content_urls?.desktop?.page || 
-             `https://en.wikipedia.org/wiki/${encodeURIComponent(bestResult.data.title)}`,
+        url: `https://grokipedia.com/page/${encodeURIComponent(grokipediaTitle)}`,
         confidence: bestResult.confidence,
-        contentAware: true, // Flag indicating this is content-based, not location-based
       })
     }
-    
+
     // No confident match found
-    return NextResponse.json({ 
-      error: 'No relevant Wikipedia article found',
-      searched: searchQueries.slice(0, 3),
+    return NextResponse.json({
+      error: 'No relevant article found',
+      searched: uniqueQueries,
     }, { status: 404 })
-    
+
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      return NextResponse.json({ error: 'Wikipedia request timeout' }, { status: 504 })
+      return NextResponse.json({ error: 'Request timeout' }, { status: 504 })
     }
-    
-    console.error('Wikipedia API error:', error)
-    return NextResponse.json({ error: 'Failed to fetch Wikipedia data' }, { status: 500 })
+
+    console.error('Grokipedia API error:', error)
+    return NextResponse.json({ error: 'Failed to fetch article data' }, { status: 500 })
   }
 }
