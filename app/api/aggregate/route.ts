@@ -151,6 +151,26 @@ function calculateWeight(event: { type: EventCategory; country?: string; contine
 // HTML CLEANUP
 // ============================================================================
 
+function cleanTitle(raw: string): string {
+  return raw
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&#x27;/g, "'")
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&ndash;/g, '\u2013')
+    .replace(/&mdash;/g, '\u2014')
+    .replace(/&hellip;/g, '\u2026')
+    .replace(/&[a-z]+;/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 function cleanHtmlDescription(raw: string): string {
   return raw
     // Remove script/style blocks entirely (content + tags)
@@ -238,21 +258,22 @@ async function fetchRSSFeed(url: string, sourceName: string, maxItems: number = 
       const item = parseRSSItem(itemXml)
       if (!item) continue
       const cleanDesc = cleanHtmlDescription(item.description)
-      const type = detectCategory(item.title, cleanDesc)
-      
+      const cleanedTitle = cleanTitle(item.title)
+      const type = detectCategory(cleanedTitle, cleanDesc)
+
       // Try geocoding, use fallback if not found
-      let geo = extractAndGeocode(`${item.title} ${cleanDesc}`)
+      let geo = extractAndGeocode(`${cleanedTitle} ${cleanDesc}`)
       const usedFallback = !geo
       if (!geo) {
         geo = getFallbackLocation()
       }
-      
+
       const timestamp = new Date(item.pubDate).getTime() || Date.now()
-      const weightScore = calculateWeight({ type, country: geo.country, continent: geo.continent, title: item.title, timestamp })
-      
+      const weightScore = calculateWeight({ type, country: geo.country, continent: geo.continent, title: cleanedTitle, timestamp })
+
       events.push({
         id: `rss-${sourceName.toLowerCase().replace(/\s/g, '-')}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        title: item.title.substring(0, 200),
+        title: cleanedTitle.substring(0, 200),
         description: cleanDesc,
         category: type,
         severity: calculateSeverity(type, item.title),
@@ -264,7 +285,7 @@ async function fetchRSSFeed(url: string, sourceName: string, maxItems: number = 
         timestamp: new Date(timestamp).toISOString(),
         source_name: sourceName,
         source_url: item.link,
-        sources: [{ title: item.title, url: item.link, sourceName, date: new Date(timestamp).toISOString() }],
+        sources: [{ title: cleanedTitle, url: item.link, sourceName, date: new Date(timestamp).toISOString() }],
         is_ongoing: false,
         weight_score: usedFallback ? weightScore * 0.7 : weightScore,
         metadata: { geocodingQuality: geo.quality },
@@ -327,14 +348,14 @@ async function fetchUSGS(): Promise<any[]> {
 function getOngoingConflicts(): any[] {
   const now = new Date().toISOString()
   return [
-    { id: 'ongoing-ukraine', title: 'Russia-Ukraine War', description: 'Full-scale Russian invasion of Ukraine, ongoing since February 2022.', category: 'armed-conflict', severity: 10, latitude: 48.379, longitude: 31.165, location_name: 'Ukraine', country: 'ukraine', continent: 'europe', timestamp: now, weight_score: 15.0, source_name: 'Global Monitor', is_ongoing: true, start_date: '2022-02-24', timeline: [{ date: '2022-02-24', event: 'Russia launches full-scale invasion' }, { date: '2024-08-06', event: 'Ukraine incursion into Kursk Oblast' }] },
-    { id: 'ongoing-gaza', title: 'Israel-Gaza War', description: 'Major conflict following Hamas attack on October 7, 2023.', category: 'armed-conflict', severity: 10, latitude: 31.354, longitude: 34.308, location_name: 'Gaza Strip', country: 'palestine', continent: 'asia', timestamp: now, weight_score: 15.0, source_name: 'Global Monitor', is_ongoing: true, start_date: '2023-10-07', timeline: [{ date: '2023-10-07', event: 'Hamas attack on southern Israel' }, { date: '2024-05-06', event: 'Rafah operation begins' }] },
-    { id: 'ongoing-sudan', title: 'Sudan Civil War', description: 'Armed conflict between SAF and RSF causing massive displacement.', category: 'armed-conflict', severity: 9, latitude: 15.500, longitude: 32.560, location_name: 'Khartoum', country: 'sudan', continent: 'africa', timestamp: now, weight_score: 12.0, source_name: 'Global Monitor', is_ongoing: true, start_date: '2023-04-15', timeline: [{ date: '2023-04-15', event: 'Fighting erupts between SAF and RSF' }] },
-    { id: 'ongoing-myanmar', title: 'Myanmar Civil War', description: 'Armed resistance against military junta following 2021 coup.', category: 'armed-conflict', severity: 8, latitude: 21.914, longitude: 95.956, location_name: 'Myanmar', country: 'myanmar', continent: 'asia', timestamp: now, weight_score: 10.0, source_name: 'Global Monitor', is_ongoing: true, start_date: '2021-02-01' },
-    { id: 'ongoing-yemen', title: 'Yemen Civil War', description: 'Multi-sided civil war with Saudi-led coalition intervention.', category: 'armed-conflict', severity: 9, latitude: 15.552, longitude: 48.516, location_name: 'Yemen', country: 'yemen', continent: 'asia', timestamp: now, weight_score: 11.0, source_name: 'Global Monitor', is_ongoing: true, start_date: '2014-09-21' },
-    { id: 'ongoing-ethiopia', title: 'Ethiopia Conflict', description: 'Ongoing instability following Tigray War ceasefire.', category: 'armed-conflict', severity: 7, latitude: 9.145, longitude: 40.489, location_name: 'Ethiopia', country: 'ethiopia', continent: 'africa', timestamp: now, weight_score: 8.0, source_name: 'Global Monitor', is_ongoing: true, start_date: '2020-11-04' },
-    { id: 'ongoing-haiti', title: 'Haiti Crisis', description: 'Gang violence and political instability in Haiti.', category: 'civil-unrest', severity: 8, latitude: 18.9712, longitude: -72.2852, location_name: 'Port-au-Prince', country: 'haiti', continent: 'north-america', timestamp: now, weight_score: 9.0, source_name: 'Global Monitor', is_ongoing: true, start_date: '2021-07-07' },
-    { id: 'ongoing-drc', title: 'DRC Conflict', description: 'Armed conflict in eastern Democratic Republic of Congo.', category: 'armed-conflict', severity: 8, latitude: -1.658, longitude: 29.220, location_name: 'North Kivu', country: 'drc', continent: 'africa', timestamp: now, weight_score: 9.0, source_name: 'Global Monitor', is_ongoing: true, start_date: '2022-03-01' },
+    { id: 'ongoing-ukraine', title: 'Russia-Ukraine War', description: 'Full-scale Russian invasion of Ukraine, ongoing since February 2022.', category: 'armed-conflict', severity: 10, latitude: 48.379, longitude: 31.165, location_name: 'Ukraine', country: 'ukraine', continent: 'europe', timestamp: now, weight_score: 15.0, source_name: 'Wikipedia', source_url: 'https://en.wikipedia.org/wiki/Russian_invasion_of_Ukraine', sources: [{ title: 'Russia-Ukraine War', url: 'https://en.wikipedia.org/wiki/Russian_invasion_of_Ukraine', sourceName: 'Wikipedia', date: now }], is_ongoing: true, start_date: '2022-02-24', timeline: [{ date: '2022-02-24', event: 'Russia launches full-scale invasion' }, { date: '2024-08-06', event: 'Ukraine incursion into Kursk Oblast' }] },
+    { id: 'ongoing-gaza', title: 'Israel-Gaza War', description: 'Major conflict following Hamas attack on October 7, 2023.', category: 'armed-conflict', severity: 10, latitude: 31.354, longitude: 34.308, location_name: 'Gaza Strip', country: 'palestine', continent: 'asia', timestamp: now, weight_score: 15.0, source_name: 'Wikipedia', source_url: 'https://en.wikipedia.org/wiki/Israel%E2%80%93Hamas_war', sources: [{ title: 'Israel-Gaza War', url: 'https://en.wikipedia.org/wiki/Israel%E2%80%93Hamas_war', sourceName: 'Wikipedia', date: now }], is_ongoing: true, start_date: '2023-10-07', timeline: [{ date: '2023-10-07', event: 'Hamas attack on southern Israel' }, { date: '2024-05-06', event: 'Rafah operation begins' }] },
+    { id: 'ongoing-sudan', title: 'Sudan Civil War', description: 'Armed conflict between SAF and RSF causing massive displacement.', category: 'armed-conflict', severity: 9, latitude: 15.500, longitude: 32.560, location_name: 'Khartoum', country: 'sudan', continent: 'africa', timestamp: now, weight_score: 12.0, source_name: 'Wikipedia', source_url: 'https://en.wikipedia.org/wiki/Sudanese_civil_war_(2023%E2%80%93present)', sources: [{ title: 'Sudan Civil War', url: 'https://en.wikipedia.org/wiki/Sudanese_civil_war_(2023%E2%80%93present)', sourceName: 'Wikipedia', date: now }], is_ongoing: true, start_date: '2023-04-15', timeline: [{ date: '2023-04-15', event: 'Fighting erupts between SAF and RSF' }] },
+    { id: 'ongoing-myanmar', title: 'Myanmar Civil War', description: 'Armed resistance against military junta following 2021 coup.', category: 'armed-conflict', severity: 8, latitude: 21.914, longitude: 95.956, location_name: 'Myanmar', country: 'myanmar', continent: 'asia', timestamp: now, weight_score: 10.0, source_name: 'Wikipedia', source_url: 'https://en.wikipedia.org/wiki/Myanmar_civil_war_(2021%E2%80%93present)', sources: [{ title: 'Myanmar Civil War', url: 'https://en.wikipedia.org/wiki/Myanmar_civil_war_(2021%E2%80%93present)', sourceName: 'Wikipedia', date: now }], is_ongoing: true, start_date: '2021-02-01' },
+    { id: 'ongoing-yemen', title: 'Yemen Civil War', description: 'Multi-sided civil war with Saudi-led coalition intervention.', category: 'armed-conflict', severity: 9, latitude: 15.552, longitude: 48.516, location_name: 'Yemen', country: 'yemen', continent: 'asia', timestamp: now, weight_score: 11.0, source_name: 'Wikipedia', source_url: 'https://en.wikipedia.org/wiki/Yemeni_civil_war_(2014%E2%80%93present)', sources: [{ title: 'Yemen Civil War', url: 'https://en.wikipedia.org/wiki/Yemeni_civil_war_(2014%E2%80%93present)', sourceName: 'Wikipedia', date: now }], is_ongoing: true, start_date: '2014-09-21' },
+    { id: 'ongoing-ethiopia', title: 'Ethiopia Conflict', description: 'Ongoing instability following Tigray War ceasefire.', category: 'armed-conflict', severity: 7, latitude: 9.145, longitude: 40.489, location_name: 'Ethiopia', country: 'ethiopia', continent: 'africa', timestamp: now, weight_score: 8.0, source_name: 'Wikipedia', source_url: 'https://en.wikipedia.org/wiki/Tigray_War', sources: [{ title: 'Ethiopia Conflict', url: 'https://en.wikipedia.org/wiki/Tigray_War', sourceName: 'Wikipedia', date: now }], is_ongoing: true, start_date: '2020-11-04' },
+    { id: 'ongoing-haiti', title: 'Haiti Crisis', description: 'Gang violence and political instability in Haiti.', category: 'civil-unrest', severity: 8, latitude: 18.9712, longitude: -72.2852, location_name: 'Port-au-Prince', country: 'haiti', continent: 'north-america', timestamp: now, weight_score: 9.0, source_name: 'Wikipedia', source_url: 'https://en.wikipedia.org/wiki/Crisis_in_Haiti', sources: [{ title: 'Haiti Crisis', url: 'https://en.wikipedia.org/wiki/Crisis_in_Haiti', sourceName: 'Wikipedia', date: now }], is_ongoing: true, start_date: '2021-07-07' },
+    { id: 'ongoing-drc', title: 'DRC Conflict', description: 'Armed conflict in eastern Democratic Republic of Congo.', category: 'armed-conflict', severity: 8, latitude: -1.658, longitude: 29.220, location_name: 'North Kivu', country: 'drc', continent: 'africa', timestamp: now, weight_score: 9.0, source_name: 'Wikipedia', source_url: 'https://en.wikipedia.org/wiki/M23_offensive_(2022%E2%80%93present)', sources: [{ title: 'DRC Conflict', url: 'https://en.wikipedia.org/wiki/M23_offensive_(2022%E2%80%93present)', sourceName: 'Wikipedia', date: now }], is_ongoing: true, start_date: '2022-03-01' },
   ]
 }
 

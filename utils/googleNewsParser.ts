@@ -167,8 +167,12 @@ export function normalizeGoogleNewsArticle(
   else if (text.match(/\b(important|major|significant)\b/)) severity = 6
   else if (text.match(/\b(minor|small|local)\b/)) severity = 3
 
+  const eventId = `google-news-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+  const sourceName = article.source || 'Google News'
+  const articleUrl = article.link || ''
+
   return {
-    id: `google-news-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    id: eventId,
     title: article.title,
     description: article.description,
     type: eventType as any,
@@ -176,18 +180,30 @@ export function normalizeGoogleNewsArticle(
     latitude: lat,
     longitude: lng,
     timestamp,
-    source: article.source || 'Google News',
+    source: sourceName,
     metadata: {
-      url: article.link,
+      url: articleUrl,
       locationName,
       country,
       continent,
       region,
-      sourceName: article.source || 'Google News',
+      sourceName,
       sourceTier: 1,
       sourceTrustWeight: 1.0,
     },
-    articles: [],
+    articles: articleUrl ? [{
+      id: eventId,
+      title: article.title,
+      description: article.description || '',
+      timestamp,
+      source: sourceName,
+      url: articleUrl,
+      sourceName,
+      publishedAt: new Date(timestamp).toISOString(),
+      type: eventType as any,
+      severity: severity as any,
+      metadata: {},
+    }] : [],
     articleCount: 1,
     isOngoing: false,
   }

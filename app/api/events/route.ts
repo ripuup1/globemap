@@ -106,32 +106,66 @@ async function fetchFromSupabase(
     if (error) throw error
     if (!data || data.length === 0) throw new Error('No events in Supabase')
 
-    const events: Event[] = (data as any[]).map((row: any) => ({
-      id: row.id,
-      title: row.title,
-      description: row.description || '',
-      type: row.category as EventType,
-      severity: row.severity as Event['severity'],
-      latitude: row.latitude,
-      longitude: row.longitude,
-      timestamp: new Date(row.timestamp).getTime(),
-      source: 'Supabase',
-      metadata: {
-        locationName: row.location_name,
-        country: row.country,
-        continent: row.continent,
-        sourceName: row.source_name,
-        url: row.source_url,
-        weightScore: row.weight_score,
-        sources: row.sources,
-        timeline: row.timeline,
-        isOngoing: row.is_ongoing,
-        startDate: row.start_date,
-      },
-      isOngoing: row.is_ongoing || false,
-      articles: [],
-      articleCount: Array.isArray(row.sources) ? row.sources.length : 1,
-    }))
+    const events: Event[] = (data as any[]).map((row: any) => {
+      // Build articles from sources array stored in Supabase
+      const sourcesArr = Array.isArray(row.sources) ? row.sources : []
+      const articles: import('@/types/event').Article[] = sourcesArr.length > 0
+        ? sourcesArr.map((s: any, idx: number) => ({
+            id: `${row.id}-src-${idx}`,
+            title: s.title || row.title,
+            description: row.description || '',
+            timestamp: new Date(s.date || row.timestamp).getTime(),
+            source: s.sourceName || row.source_name || 'Unknown',
+            url: s.url || row.source_url || '',
+            sourceName: s.sourceName || row.source_name || 'Unknown',
+            publishedAt: s.date || new Date(row.timestamp).toISOString(),
+            type: row.category as EventType,
+            severity: row.severity as Event['severity'],
+            metadata: {},
+          }))
+        : row.source_url
+          ? [{
+              id: row.id,
+              title: row.title,
+              description: row.description || '',
+              timestamp: new Date(row.timestamp).getTime(),
+              source: row.source_name || 'Unknown',
+              url: row.source_url,
+              sourceName: row.source_name || 'Unknown',
+              publishedAt: new Date(row.timestamp).toISOString(),
+              type: row.category as EventType,
+              severity: row.severity as Event['severity'],
+              metadata: {},
+            }]
+          : []
+
+      return {
+        id: row.id,
+        title: row.title,
+        description: row.description || '',
+        type: row.category as EventType,
+        severity: row.severity as Event['severity'],
+        latitude: row.latitude,
+        longitude: row.longitude,
+        timestamp: new Date(row.timestamp).getTime(),
+        source: 'Supabase',
+        metadata: {
+          locationName: row.location_name,
+          country: row.country,
+          continent: row.continent,
+          sourceName: row.source_name,
+          url: row.source_url,
+          weightScore: row.weight_score,
+          sources: row.sources,
+          timeline: row.timeline,
+          isOngoing: row.is_ongoing,
+          startDate: row.start_date,
+        },
+        isOngoing: row.is_ongoing || false,
+        articles,
+        articleCount: Math.max(articles.length, 1),
+      }
+    })
 
     if (!category && !country) setCachedEvents(events, 'supabase')
     return { events, fromSupabase: true, cached: false }
@@ -190,6 +224,25 @@ const RSS_FEEDS = [
   { url: 'https://feeds.bbci.co.uk/news/technology/rss.xml', name: 'BBC Tech' },
 ]
 
+function cleanRssTitle(raw: string): string {
+  return raw
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&ndash;/g, '\u2013')
+    .replace(/&mdash;/g, '\u2014')
+    .replace(/&hellip;/g, '\u2026')
+    .replace(/&[a-z]+;/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 function cleanRssDescription(raw: string): string {
   return raw
     .replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, '')
@@ -231,10 +284,15 @@ function parseRSSItem(itemXml: string) {
 async function fetchRSSFallback(): Promise<{ events: Event[]; fromSupabase: boolean; cached: boolean }> {
   // Hardcoded ongoing conflicts - always returned immediately
   const now = Date.now()
+  const conflictArticles: Record<string, { url: string; sourceName: string }> = {
+    'ongoing-ukraine': { url: 'https://en.wikipedia.org/wiki/Russian_invasion_of_Ukraine', sourceName: 'Wikipedia' },
+    'ongoing-gaza': { url: 'https://en.wikipedia.org/wiki/Israel%E2%80%93Hamas_war', sourceName: 'Wikipedia' },
+    'ongoing-sudan': { url: 'https://en.wikipedia.org/wiki/Sudanese_civil_war_(2023%E2%80%93present)', sourceName: 'Wikipedia' },
+  }
   const conflicts: Event[] = [
-    { id: 'ongoing-ukraine', title: 'Russia-Ukraine War', description: 'Full-scale Russian invasion of Ukraine.', type: 'armed-conflict', severity: 10 as Event['severity'], latitude: 48.379, longitude: 31.165, timestamp: now, source: 'Curated', metadata: { country: 'ukraine', continent: 'europe', isOngoing: true }, isOngoing: true, articles: [], articleCount: 1 },
-    { id: 'ongoing-gaza', title: 'Israel-Gaza War', description: 'Major conflict following October 7, 2023 attack.', type: 'armed-conflict', severity: 10 as Event['severity'], latitude: 31.354, longitude: 34.308, timestamp: now, source: 'Curated', metadata: { country: 'palestine', continent: 'asia', isOngoing: true }, isOngoing: true, articles: [], articleCount: 1 },
-    { id: 'ongoing-sudan', title: 'Sudan Civil War', description: 'Armed conflict between SAF and RSF.', type: 'armed-conflict', severity: 9 as Event['severity'], latitude: 15.500, longitude: 32.560, timestamp: now, source: 'Curated', metadata: { country: 'sudan', continent: 'africa', isOngoing: true }, isOngoing: true, articles: [], articleCount: 1 },
+    { id: 'ongoing-ukraine', title: 'Russia-Ukraine War', description: 'Full-scale Russian invasion of Ukraine.', type: 'armed-conflict', severity: 10 as Event['severity'], latitude: 48.379, longitude: 31.165, timestamp: now, source: 'Curated', metadata: { country: 'ukraine', continent: 'europe', isOngoing: true, url: conflictArticles['ongoing-ukraine'].url, sourceName: conflictArticles['ongoing-ukraine'].sourceName }, isOngoing: true, articles: [{ id: 'ongoing-ukraine', title: 'Russia-Ukraine War', description: 'Full-scale Russian invasion of Ukraine.', timestamp: now, source: 'Wikipedia', url: conflictArticles['ongoing-ukraine'].url, sourceName: 'Wikipedia', publishedAt: new Date(now).toISOString(), type: 'armed-conflict', severity: 10 as Event['severity'], metadata: {} }], articleCount: 1 },
+    { id: 'ongoing-gaza', title: 'Israel-Gaza War', description: 'Major conflict following October 7, 2023 attack.', type: 'armed-conflict', severity: 10 as Event['severity'], latitude: 31.354, longitude: 34.308, timestamp: now, source: 'Curated', metadata: { country: 'palestine', continent: 'asia', isOngoing: true, url: conflictArticles['ongoing-gaza'].url, sourceName: conflictArticles['ongoing-gaza'].sourceName }, isOngoing: true, articles: [{ id: 'ongoing-gaza', title: 'Israel-Gaza War', description: 'Major conflict following October 7, 2023 attack.', timestamp: now, source: 'Wikipedia', url: conflictArticles['ongoing-gaza'].url, sourceName: 'Wikipedia', publishedAt: new Date(now).toISOString(), type: 'armed-conflict', severity: 10 as Event['severity'], metadata: {} }], articleCount: 1 },
+    { id: 'ongoing-sudan', title: 'Sudan Civil War', description: 'Armed conflict between SAF and RSF.', type: 'armed-conflict', severity: 9 as Event['severity'], latitude: 15.500, longitude: 32.560, timestamp: now, source: 'Curated', metadata: { country: 'sudan', continent: 'africa', isOngoing: true, url: conflictArticles['ongoing-sudan'].url, sourceName: conflictArticles['ongoing-sudan'].sourceName }, isOngoing: true, articles: [{ id: 'ongoing-sudan', title: 'Sudan Civil War', description: 'Armed conflict between SAF and RSF.', timestamp: now, source: 'Wikipedia', url: conflictArticles['ongoing-sudan'].url, sourceName: 'Wikipedia', publishedAt: new Date(now).toISOString(), type: 'armed-conflict', severity: 9 as Event['severity'], metadata: {} }], articleCount: 1 },
   ]
 
   // Race all external fetches against a 12s overall timeout.
@@ -258,24 +316,43 @@ async function fetchRSSFallback(): Promise<{ events: Event[]; fromSupabase: bool
           const geo = extractAndGeocode(`${item.title} ${item.description}`)
           if (!geo) continue
 
+          const eventId = `rss-${feed.name.toLowerCase().replace(/\s/g, '-')}-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`
+          const eventTitle = cleanRssTitle(item.title).substring(0, 200)
+          const eventType = detectCategory(item.title)
+          const eventTimestamp = new Date(item.pubDate).getTime() || Date.now()
+          const articleUrl = item.link || ''
+
           events.push({
-            id: `rss-${feed.name.toLowerCase().replace(/\s/g, '-')}-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
-            title: item.title.substring(0, 200),
+            id: eventId,
+            title: eventTitle,
             description: item.description,
-            type: detectCategory(item.title),
+            type: eventType,
             severity: 5 as Event['severity'],
             latitude: geo.lat,
             longitude: geo.lng,
-            timestamp: new Date(item.pubDate).getTime() || Date.now(),
+            timestamp: eventTimestamp,
             source: 'RSS',
             metadata: {
               locationName: geo.location,
               country: geo.country,
               continent: geo.continent,
               sourceName: feed.name,
+              url: articleUrl,
             },
             isOngoing: false,
-            articles: [],
+            articles: articleUrl ? [{
+              id: eventId,
+              title: eventTitle,
+              description: item.description,
+              timestamp: eventTimestamp,
+              source: feed.name,
+              url: articleUrl,
+              sourceName: feed.name,
+              publishedAt: new Date(eventTimestamp).toISOString(),
+              type: eventType,
+              severity: 5 as Event['severity'],
+              metadata: {},
+            }] : [],
             articleCount: 1,
           })
         }
