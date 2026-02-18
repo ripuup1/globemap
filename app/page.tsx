@@ -972,14 +972,27 @@ export default function HomePage() {
           isHidden={!!selectedEvent || isSettingsPanelOpen}
         />
 
-        {/* Theme Toggle - Top Right (hidden on mobile, moved to satellite settings) */}
-        <div 
-          className="fixed top-4 right-4 z-40 theme-toggle-desktop"
+        {/* Top Right Controls - News link + Theme Toggle */}
+        <div
+          className="fixed top-4 right-4 z-40 flex items-center gap-2 theme-toggle-desktop"
           style={{
             opacity: selectedEvent ? 0.4 : 0.9,
             transition: 'opacity 0.3s ease',
           }}
         >
+          <a
+            href="/news/in-the-news"
+            className="px-3 py-1.5 rounded-lg text-[11px] font-semibold tracking-wider uppercase transition-all duration-200 hover:scale-105"
+            style={{
+              background: colors.barBg,
+              backdropFilter: 'blur(12px)',
+              border: `1px solid ${colors.barBorder}`,
+              color: colors.textSecondary,
+              fontFamily: 'var(--font-exo2), system-ui, sans-serif',
+            }}
+          >
+            News
+          </a>
           <ThemeToggle onThemeChange={setTheme} />
         </div>
 
