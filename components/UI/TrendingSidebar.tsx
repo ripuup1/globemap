@@ -1,10 +1,11 @@
 import { memo, useState } from 'react'
 import { DetectedTopic } from '@/utils/topicDetector'
-import { themeColors } from '@/utils/themeColors'
+import { getThemeColors, ThemeMode } from '@/utils/themeColors'
 
 interface TrendingSidebarProps {
   topics: DetectedTopic[]
   onTopicClick: (topic: DetectedTopic) => void
+  theme: ThemeMode
   isHidden?: boolean // Hide when panels are open
 }
 
@@ -15,9 +16,9 @@ const CATEGORY_COLORS: Record<string, string> = {
   markets: '#10b981',
 }
 
-function TrendingSidebar({ topics, onTopicClick, isHidden = false }: TrendingSidebarProps) {
+function TrendingSidebar({ topics, onTopicClick, theme, isHidden = false }: TrendingSidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
-  const colors = themeColors
+  const colors = getThemeColors(theme)
 
   // Show top 8 topics sorted by priority
   const displayTopics = topics

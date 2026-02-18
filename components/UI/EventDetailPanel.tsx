@@ -15,7 +15,7 @@ import { getSeverityLabel, getSeverityColor } from '@/utils/severity'
 import { validateUrl, validateEventForRender, formatCoordinates } from '@/utils/validation'
 import { capitalizeCountry, capitalizeCity, capitalizeLocation } from '@/utils/capitalization'
 import { getCategoryColor, getIconInfo } from '../Globe/markerIcons'
-import { themeColors } from '@/utils/themeColors'
+import { getThemeColors } from '@/utils/themeColors'
 
 interface EventDetailPanelProps {
   event: Event | null
@@ -26,6 +26,7 @@ interface EventDetailPanelProps {
   onGoBack?: () => void // Go back in navigation history
   isBookmarked?: boolean
   onToggleBookmark?: (eventId: string) => void
+  theme?: 'dark' | 'light'
 }
 
 interface AggregatedSource {
@@ -56,6 +57,7 @@ function EventDetailPanel({
   onGoBack,
   isBookmarked = false,
   onToggleBookmark,
+  theme = 'dark',
 }: EventDetailPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
@@ -272,7 +274,7 @@ function EventDetailPanel({
       .slice(0, 4)
   }, [processedEvent, allEvents])
 
-  const tc = themeColors
+  const tc = getThemeColors(theme)
 
   if (!processedEvent) return null
 
@@ -335,9 +337,13 @@ function EventDetailPanel({
         className={`event-detail-panel fixed right-0 top-0 h-full w-full sm:max-w-md z-50 overflow-y-auto transition-transform duration-300 ease-out ${isVisible ? 'translate-x-0 panel-open' : 'translate-x-full panel-closed'}`}
         style={{
           fontFamily: 'var(--font-exo2), system-ui, sans-serif',
-          background: `linear-gradient(180deg, rgba(8, 12, 24, 0.98) 0%, rgba(15, 23, 42, 0.98) 50%, rgba(20, 30, 55, 0.98) 100%)`,
+          background: theme === 'dark'
+            ? `linear-gradient(180deg, rgba(8, 12, 24, 0.98) 0%, rgba(15, 23, 42, 0.98) 50%, rgba(20, 30, 55, 0.98) 100%)`
+            : `linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.98) 50%, rgba(241, 245, 249, 0.98) 100%)`,
           backdropFilter: 'blur(20px)',
-          boxShadow: `-12px 0 40px rgba(0, 0, 0, 0.6), inset 1px 0 0 rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.15)`,
+          boxShadow: theme === 'dark'
+            ? `-12px 0 40px rgba(0, 0, 0, 0.6), inset 1px 0 0 rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.15)`
+            : `-12px 0 40px rgba(0, 0, 0, 0.1), inset 1px 0 0 rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.15)`,
           borderLeft: `1px solid rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.2)`,
         }}
         role="dialog"
@@ -609,7 +615,7 @@ function EventDetailPanel({
             >
               <div className="text-[9px] uppercase tracking-wider mb-1.5 font-medium" style={{ color: tc.textMuted }}>Accuracy</div>
               <div className="flex items-center gap-1.5">
-                <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: '#1f2937' }}>
+                <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: theme === 'dark' ? '#1f2937' : '#e2e8f0' }}>
                   <div
                     className="h-full rounded-full transition-all duration-500"
                     style={{

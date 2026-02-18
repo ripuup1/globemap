@@ -21,12 +21,13 @@ import EventDetailPanel from '@/components/UI/EventDetailPanel'
 import SatelliteControlPanel, { ExtendedFilterState } from '@/components/UI/SatelliteControlPanel'
 import InteractionHintModal from '@/components/UI/InteractionHintModal'
 import VoxTerraLogo from '@/components/UI/VoxTerraLogo'
+import ThemeToggle, { ThemeMode } from '@/components/UI/ThemeToggle'
 import { balanceCategories } from '@/utils/categoryBalance'
 import { extractCountriesFromEvents, getCountryKey } from '@/utils/countryExtractor'
 import { calculateDistance } from '@/utils/geo'
 import { SEARCH_SYNONYMS } from '@/utils/searchSynonyms'
 import { useBookmarks } from '@/hooks/useBookmarks'
-import { themeColors } from '@/utils/themeColors'
+import { getThemeColors } from '@/utils/themeColors'
 import { useTopics } from '@/hooks/useTopics'
 import TrendingSidebar from '@/components/UI/TrendingSidebar'
 
@@ -357,7 +358,18 @@ export default function HomePage() {
   const selectedEventRef = useRef<Event | null>(null)
   selectedEventRef.current = selectedEvent
   
-  const colors = themeColors
+  // Theme state (dark/light mode)
+  const [theme, setTheme] = useState<ThemeMode>('dark')
+  const colors = getThemeColors(theme)
+
+  // Listen for theme changes from settings panel (Option 12A)
+  useEffect(() => {
+    const handleThemeChange = (e: CustomEvent<ThemeMode>) => {
+      setTheme(e.detail)
+    }
+    window.addEventListener('theme-change', handleThemeChange as EventListener)
+    return () => window.removeEventListener('theme-change', handleThemeChange as EventListener)
+  }, [])
 
   // FIX #7: Private view counter - silent background ping
   useEffect(() => {
@@ -365,6 +377,15 @@ export default function HomePage() {
     fetch('/api/views', { method: 'POST' }).catch(() => {})
   }, [])
 
+  // Load persisted theme on mount (prevents flash when ThemeToggle reads localStorage)
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('voxtera-theme') as ThemeMode | null
+      if (stored) setTheme(stored)
+    } catch {
+      // Storage disabled or unavailable
+    }
+  }, [])
 
   // Memoized event filtering for performance - includes country and distance filters
   const filteredEvents = useMemo(() => {
@@ -556,30 +577,20 @@ export default function HomePage() {
   // Navigate to next/previous pin in category browse mode
   const navigateCategoryPin = useCallback((direction: 'next' | 'prev') => {
     if (!categoryBrowseMode) return
-
+    
     const { matchingEvents, currentIndex } = categoryBrowseMode
-    const newIndex = direction === 'next'
+    const newIndex = direction === 'next' 
       ? (currentIndex + 1) % matchingEvents.length
       : (currentIndex - 1 + matchingEvents.length) % matchingEvents.length
-
+    
     const targetEvent = matchingEvents[newIndex]
-
+    
     setCategoryBrowseMode(prev => prev ? { ...prev, currentIndex: newIndex } : null)
-
-    // Open the event detail panel for the target pin
-    setSelectedEvent(targetEvent)
-
-    // Fly to the new event with pulse animation on arrival
+    
+    // Fly to the new event (no pulse for next/prev navigation per user request)
     setFlyToTarget({
       lat: targetEvent.latitude,
       lng: targetEvent.longitude,
-      onComplete: () => {
-        const marker = document.querySelector(`[data-event-id="${targetEvent.id}"]`)
-        if (marker) {
-          marker.classList.add('target-pulse')
-          setTimeout(() => marker.classList.remove('target-pulse'), 1200)
-        }
-      }
     })
   }, [categoryBrowseMode])
 
@@ -957,12 +968,13 @@ export default function HomePage() {
           onTopicClick={(topic) => {
             enterCategoryBrowseMode(topic.keywords[0] || topic.name, topic.name, '')
           }}
+          theme={theme}
           isHidden={!!selectedEvent || isSettingsPanelOpen}
         />
 
-        {/* Top Right - News link */}
+        {/* Top Right Controls - News link + Theme Toggle */}
         <div
-          className="fixed top-4 right-4 z-40"
+          className="fixed top-4 right-4 z-40 flex items-center gap-2 theme-toggle-desktop"
           style={{
             opacity: selectedEvent ? 0.4 : 0.9,
             transition: 'opacity 0.3s ease',
@@ -981,6 +993,7 @@ export default function HomePage() {
           >
             News
           </a>
+          <ThemeToggle onThemeChange={setTheme} />
         </div>
 
         {/* Interaction Hint Modal - Center Overlay */}
@@ -1044,6 +1057,7 @@ export default function HomePage() {
             flyToTarget={flyToTarget}
             highlightedEventIds={highlightedEventIds}
             isolatedEventIds={isolatedEventIds}
+            theme={theme}
             showLabels={true}
           />
         </div>
@@ -1057,6 +1071,7 @@ export default function HomePage() {
           onTimeRangeChange={setTimeRange}
           zoomLevel={globeZoom}
           globeAltitude={globeAltitude}
+          theme={theme}
           onSettingsOpenChange={setIsSettingsPanelOpen}
           bookmarkedIds={bookmarkedIds}
           onSelectEvent={(ev) => setSelectedEvent(ev)}
@@ -1074,6 +1089,7 @@ export default function HomePage() {
             onGoBack={goBackInHistory}
             isBookmarked={isBookmarked(selectedEvent.id)}
             onToggleBookmark={toggleBookmark}
+            theme={theme}
           />
         )}
 
@@ -1174,11 +1190,15 @@ export default function HomePage() {
             role="search"
             aria-label="Search events, regions, and categories"
             style={{
-              background: 'linear-gradient(135deg, rgba(17, 24, 39, 0.92) 0%, rgba(30, 41, 59, 0.92) 100%)',
+              background: theme === 'dark'
+                ? 'linear-gradient(135deg, rgba(17, 24, 39, 0.92) 0%, rgba(30, 41, 59, 0.92) 100%)'
+                : 'linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(241, 245, 249, 0.92) 100%)',
               backdropFilter: 'blur(20px)',
               borderRadius: '14px',
-              border: '1px solid rgba(99, 102, 241, 0.15)',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
+              border: `1px solid ${theme === 'dark' ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.25)'}`,
+              boxShadow: theme === 'dark'
+                ? '0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05)'
+                : '0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04)',
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             }}
           >

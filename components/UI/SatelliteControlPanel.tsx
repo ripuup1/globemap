@@ -33,6 +33,7 @@ interface SatelliteControlPanelProps {
   onTimeRangeChange: (range: string) => void
   zoomLevel?: number
   globeAltitude?: number // For ISS zoom-aware positioning
+  theme?: 'dark' | 'light' // Theme for ISS day/night visuals
   onSettingsOpenChange?: (isOpen: boolean) => void // Notify parent of settings state
   bookmarkedIds?: Set<string>
   onSelectEvent?: (event: Event) => void
@@ -83,6 +84,7 @@ function SatelliteControlPanel({
   onTimeRangeChange,
   zoomLevel = 1.0,
   globeAltitude = 2.5,
+  theme = 'dark',
   onSettingsOpenChange,
   bookmarkedIds,
   onSelectEvent,
@@ -362,6 +364,7 @@ function SatelliteControlPanel({
         activeFiltersCount={activeFiltersCount}
         zoomLevel={zoomLevel}
         globeAltitude={globeAltitude}
+        theme={theme}
       />
 
       {isExpanded && (
@@ -387,10 +390,14 @@ function SatelliteControlPanel({
             className="overflow-hidden max-sm:rounded-t-[20px] max-sm:rounded-b-none sm:rounded-2xl"
             style={{
               fontFamily: 'var(--font-exo2), system-ui, sans-serif',
-              background: 'linear-gradient(180deg, rgba(17, 24, 39, 0.98) 0%, rgba(31, 41, 55, 0.98) 100%)',
+              background: theme === 'dark'
+                ? 'linear-gradient(180deg, rgba(17, 24, 39, 0.98) 0%, rgba(31, 41, 55, 0.98) 100%)'
+                : 'linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.98) 100%)',
               backdropFilter: 'blur(20px)',
               WebkitBackdropFilter: 'blur(20px)',
-              boxShadow: '0 -4px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255,255,255,0.1)',
+              boxShadow: theme === 'dark'
+                ? '0 -4px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255,255,255,0.1)'
+                : '0 -4px 24px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0,0,0,0.08)',
             }}
           >
             {/* FIX #3: Bottom sheet swipe handle - mobile only */}
@@ -398,18 +405,19 @@ function SatelliteControlPanel({
               <div className="w-10 h-1 bg-white/20 rounded-full" />
             </div>
             {/* Header */}
-            <div className="px-5 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+            <div className="px-5 py-4" style={{ borderBottom: `1px solid ${theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}` }}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">🛰️</span>
                   <div>
-                    <h2 className="text-base font-bold text-white">Globe Settings</h2>
-                    <p className="text-xs text-gray-500">{displayEvents.length} events</p>
+                    <h2 className="text-base font-bold" style={{ color: theme === 'dark' ? '#fff' : '#0f172a' }}>Globe Settings</h2>
+                    <p className="text-xs" style={{ color: theme === 'dark' ? '#6b7280' : '#94a3b8' }}>{displayEvents.length} events</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setIsExpanded(false)}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors text-gray-400"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
+                  style={{ color: theme === 'dark' ? '#9ca3af' : '#64748b' }}
                   aria-label="Close settings"
                 >
                   ✕
@@ -425,6 +433,7 @@ function SatelliteControlPanel({
             >
               {/* Category Filters */}
               <AccordionSection
+                theme={theme}
                 title="Category Filters"
                 
                 isOpen={activeSection === 'filters'}
@@ -486,6 +495,7 @@ function SatelliteControlPanel({
 
               {/* Country Filter - NEW */}
               <AccordionSection
+                theme={theme}
                 title="Country Stories"
                 
                 isOpen={activeSection === 'countries'}
@@ -522,6 +532,7 @@ function SatelliteControlPanel({
 
               {/* Advanced Settings - Distance Filter */}
               <AccordionSection
+                theme={theme}
                 title="Advanced Settings"
                 
                 isOpen={activeSection === 'advanced'}
@@ -599,6 +610,7 @@ function SatelliteControlPanel({
 
               {/* Statistics */}
               <AccordionSection
+                theme={theme}
                 title="Statistics"
                 
                 isOpen={activeSection === 'stats'}
@@ -639,6 +651,7 @@ function SatelliteControlPanel({
 
               {/* Legend - Exact Match to Globe Markers */}
               <AccordionSection
+                theme={theme}
                 title="Map Legend"
                 
                 isOpen={activeSection === 'legend'}
@@ -731,6 +744,7 @@ function SatelliteControlPanel({
 
               {/* Bookmarked Events */}
               <AccordionSection
+                theme={theme}
                 title="Bookmarks"
                 badge={bookmarkedEvents.length || undefined}
                 isOpen={activeSection === 'bookmarks'}
@@ -769,6 +783,54 @@ function SatelliteControlPanel({
                 )}
               </AccordionSection>
 
+              {/* Option 12A: Theme Toggle (visible on mobile, moved from top right) */}
+              <AccordionSection
+                theme={theme}
+                title="Appearance"
+                
+                isOpen={activeSection === 'appearance'}
+                onToggle={() => toggleSection('appearance')}
+              >
+                <div className="space-y-3">
+                  <p className="text-xs text-gray-400">Toggle between light and dark mode</p>
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-white/5">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center ${theme === 'dark' ? 'bg-slate-700' : 'bg-amber-200'}`}>
+                        <div className={`w-2 h-2 rounded-full ${theme === 'dark' ? 'bg-slate-400' : 'bg-amber-500'}`} />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium text-white">
+                          {theme === 'dark' ? 'Dark Mode' : 'Light Mode'}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {theme === 'dark' ? 'Easy on the eyes' : 'Bright and clear'}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const newTheme = theme === 'dark' ? 'light' : 'dark'
+                        // Update localStorage and trigger parent callback
+                        localStorage.setItem('voxtera-theme', newTheme)
+                        document.documentElement.classList.toggle('light-mode', newTheme === 'light')
+                        // This will be picked up by the theme state in page.tsx
+                        window.dispatchEvent(new CustomEvent('theme-change', { detail: newTheme }))
+                      }}
+                      className="relative w-12 h-6 rounded-full transition-colors duration-200"
+                      style={{
+                        backgroundColor: theme === 'dark' ? 'rgba(99, 102, 241, 0.8)' : 'rgba(251, 191, 36, 0.8)',
+                      }}
+                    >
+                      <div
+                        className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-200"
+                        style={{
+                          transform: theme === 'dark' ? 'translateX(2px)' : 'translateX(26px)',
+                        }}
+                      />
+                    </button>
+                  </div>
+                </div>
+              </AccordionSection>
             </div>
           </div>
         </div>
@@ -783,19 +845,21 @@ interface AccordionSectionProps {
   onToggle: () => void
   badge?: number
   children: React.ReactNode
+  theme?: 'dark' | 'light'
 }
 
-function AccordionSection({ title, isOpen, onToggle, badge, children }: AccordionSectionProps) {
+function AccordionSection({ title, isOpen, onToggle, badge, children, theme = 'dark' }: AccordionSectionProps) {
   const sectionId = title.toLowerCase().replace(/\s+/g, '-')
   const panelId = `accordion-panel-${sectionId}`
 
   return (
-    <div style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+    <div style={{ borderBottom: `1px solid ${theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)'}` }}>
       <button
         onClick={onToggle}
         aria-expanded={isOpen}
         aria-controls={panelId}
-        className="w-full flex items-center justify-between px-5 py-3.5 text-left transition-colors text-white"
+        className="w-full flex items-center justify-between px-5 py-3.5 text-left transition-colors"
+        style={{ color: theme === 'dark' ? '#fff' : '#0f172a' }}
       >
         <div className="flex items-center gap-2.5">
           <span className="text-sm font-medium uppercase tracking-wide">{title}</span>

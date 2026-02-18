@@ -26,6 +26,8 @@ interface OrbitalCommandProps {
   opacity?: number
   /** Click handler for the orbital */
   onClick?: () => void
+  /** Theme mode for color adjustments */
+  theme?: 'light' | 'dark'
 }
 
 function OrbitalCommand({
@@ -33,16 +35,20 @@ function OrbitalCommand({
   animated = true,
   opacity = 0.8,
   onClick,
+  theme = 'dark',
 }: OrbitalCommandProps) {
-  const colors = useMemo(() => ({
-    ringTrack: 'rgba(99, 102, 241, 0.3)',
-    scanningArc: 'rgba(99, 102, 241, 0.6)',
-    tickMarks: 'rgba(99, 102, 241, 0.4)',
-    innerRing: 'rgba(99, 102, 241, 0.2)',
-    background: 'rgba(15, 23, 42, 0.8)',
-    centerBorder: 'rgba(99, 102, 241, 0.3)',
-    glow: 'rgba(99, 102, 241, 0.4)',
-  }), [])
+  const colors = useMemo(() => {
+    const isDark = theme === 'dark'
+    return {
+      ringTrack: isDark ? 'rgba(99, 102, 241, 0.3)' : 'rgba(99, 102, 241, 0.4)',
+      scanningArc: isDark ? 'rgba(99, 102, 241, 0.6)' : 'rgba(99, 102, 241, 0.7)',
+      tickMarks: isDark ? 'rgba(99, 102, 241, 0.4)' : 'rgba(99, 102, 241, 0.5)',
+      innerRing: isDark ? 'rgba(99, 102, 241, 0.2)' : 'rgba(99, 102, 241, 0.3)',
+      background: isDark ? 'rgba(15, 23, 42, 0.8)' : 'rgba(255, 255, 255, 0.9)',
+      centerBorder: isDark ? 'rgba(99, 102, 241, 0.3)' : 'rgba(99, 102, 241, 0.4)',
+      glow: isDark ? 'rgba(99, 102, 241, 0.4)' : 'rgba(99, 102, 241, 0.5)',
+    }
+  }, [theme])
   
   const ringStyle = useMemo(() => ({
     width: size,

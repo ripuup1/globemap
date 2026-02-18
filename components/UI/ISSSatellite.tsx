@@ -18,6 +18,7 @@ interface ISSSatelliteProps {
   activeFiltersCount: number
   zoomLevel?: number
   globeAltitude?: number
+  theme?: 'dark' | 'light'
 }
 
 const ZOOM_CONFIG = {
@@ -52,15 +53,25 @@ function ISSSatellite({
   isExpanded,
   activeFiltersCount,
   globeAltitude = 2.5,
+  theme = 'dark',
 }: ISSSatelliteProps) {
-  const solarPanelStyles = {
-    background: 'linear-gradient(135deg, #1e2433 0%, #353f55 15%, #d4a829 28%, #353f55 42%, #1e2433 55%, #9a8060 75%, #1e2433 100%)',
-    gridPattern: 'linear-gradient(rgba(212,168,41,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(212,168,41,0.15) 1px, transparent 1px)',
-    border: '1px solid rgba(212, 168, 41, 0.35)',
-    boxShadow: 'inset 0 1px 0 rgba(212, 168, 41, 0.45), inset 0 -1px 0 rgba(0,0,0,0.4), 0 0 20px rgba(212, 168, 41, 0.35), 0 2px 10px rgba(0,0,0,0.5)',
-    trussColor: 'linear-gradient(180deg, #e2e8f0 0%, #f8fafc 30%, #ffffff 50%, #f8fafc 70%, #e2e8f0 100%)',
-    glowFilter: 'drop-shadow(0 0 8px rgba(201, 162, 39, 0.3)) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4))',
-  }
+  const solarPanelStyles = theme === 'light'
+    ? {
+        background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 25%, #16213e 50%, #1a1a2e 75%, #0a0a0a 100%)',
+        gridPattern: 'linear-gradient(rgba(100,150,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(100,150,255,0.08) 1px, transparent 1px)',
+        border: '1px solid rgba(100, 150, 255, 0.2)',
+        boxShadow: 'inset 0 1px 0 rgba(100, 150, 255, 0.15), inset 0 -1px 0 rgba(0,0,0,0.6), 0 0 15px rgba(100, 150, 255, 0.2), 0 2px 8px rgba(0,0,0,0.5)',
+        trussColor: 'linear-gradient(180deg, #e2e8f0 0%, #f8fafc 30%, #ffffff 50%, #f8fafc 70%, #e2e8f0 100%)',
+        glowFilter: 'drop-shadow(0 0 8px rgba(100, 150, 255, 0.3)) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4))',
+      }
+    : {
+        background: 'linear-gradient(135deg, #1e2433 0%, #353f55 15%, #d4a829 28%, #353f55 42%, #1e2433 55%, #9a8060 75%, #1e2433 100%)',
+        gridPattern: 'linear-gradient(rgba(212,168,41,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(212,168,41,0.15) 1px, transparent 1px)',
+        border: '1px solid rgba(212, 168, 41, 0.35)',
+        boxShadow: 'inset 0 1px 0 rgba(212, 168, 41, 0.45), inset 0 -1px 0 rgba(0,0,0,0.4), 0 0 20px rgba(212, 168, 41, 0.35), 0 2px 10px rgba(0,0,0,0.5)',
+        trussColor: 'linear-gradient(180deg, #e2e8f0 0%, #f8fafc 30%, #ffffff 50%, #f8fafc 70%, #e2e8f0 100%)',
+        glowFilter: 'drop-shadow(0 0 8px rgba(201, 162, 39, 0.3)) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4))',
+      }
 
   // Refs for direct DOM manipulation (no re-renders)
   const containerRef = useRef<HTMLDivElement>(null)
