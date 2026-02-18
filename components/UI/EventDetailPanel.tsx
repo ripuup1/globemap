@@ -334,7 +334,7 @@ function EventDetailPanel({
         ref={panelRef}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        className={`event-detail-panel fixed right-0 top-0 h-full w-full sm:max-w-md z-50 overflow-y-auto transition-transform duration-300 ease-out ${isVisible ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`event-detail-panel fixed right-0 top-0 h-full w-full sm:max-w-md z-50 overflow-y-auto transition-transform duration-300 ease-out ${isVisible ? 'translate-x-0 panel-open' : 'translate-x-full panel-closed'}`}
         style={{
           fontFamily: 'var(--font-exo2), system-ui, sans-serif',
           background: theme === 'dark'
@@ -923,12 +923,16 @@ function EventDetailPanel({
             role="dialog"
             aria-modal="true"
             aria-labelledby="sources-modal-title"
-            className="fixed inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-lg sm:max-h-[80vh] z-[70] rounded-2xl overflow-hidden"
+            className="fixed sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-lg sm:max-h-[80vh] z-[70] rounded-2xl overflow-hidden"
             style={{
               animation: 'edp-modalIn 0.25s ease-out',
               background: 'linear-gradient(180deg, rgba(8, 12, 24, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%)',
               border: `1px solid rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.2)`,
               boxShadow: `0 25px 80px rgba(0, 0, 0, 0.5), 0 0 40px rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.1)`,
+              top: '16px',
+              left: '16px',
+              right: '16px',
+              bottom: 'max(16px, env(safe-area-inset-bottom, 16px))',
             }}
           >
             

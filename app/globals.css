@@ -111,7 +111,7 @@ body {
     transition: transform 0.3s ease-out !important;
   }
 
-  .event-detail-panel.translate-x-0 {
+  .event-detail-panel.panel-open {
     transform: translateY(0) !important;
   }
 

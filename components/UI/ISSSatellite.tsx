@@ -169,14 +169,14 @@ function ISSSatellite({
       role="button"
       tabIndex={0}
       aria-label="Open ISS Control settings panel"
-      className="fixed z-40 cursor-pointer group"
+      className="fixed z-10 cursor-pointer group max-sm:pointer-events-none"
       style={{
         left: '50%',
         top: '50%',
         transform: 'translate(-50%, -50%)',
         willChange: 'transform, opacity',
         filter: solarPanelStyles.glowFilter,
-        padding: '12px', // Expand touch target for mobile
+        padding: '12px',
       }}
     >
       {/* ISS Model Container */}

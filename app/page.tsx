@@ -30,7 +30,6 @@ import { useBookmarks } from '@/hooks/useBookmarks'
 import { getThemeColors } from '@/utils/themeColors'
 import { useTopics } from '@/hooks/useTopics'
 import TrendingSidebar from '@/components/UI/TrendingSidebar'
-import TimelineSlider from '@/components/UI/TimelineSlider'
 
 // ============================================================================
 // WORLD ALIGN LOADER
@@ -295,7 +294,6 @@ export default function HomePage() {
   })
   const [searchQuery, setSearchQuery] = useState('')
   const [timeRange, setTimeRange] = useState('all')
-  const [customTimeRange, setCustomTimeRange] = useState<{ start: number; end: number } | null>(null)
   const [globeZoom, setGlobeZoom] = useState<number>(1.0)
   const [globeAltitude, setGlobeAltitude] = useState<number>(2.5)
   const [showInteractionHint, setShowInteractionHint] = useState(false)
@@ -384,9 +382,7 @@ export default function HomePage() {
   const filteredEvents = useMemo(() => {
     let result = events.filter(event => {
       // Time range filter
-      if (timeRange === 'custom' && customTimeRange) {
-        if (event.timestamp < customTimeRange.start) return false
-      } else if (timeRange !== 'all') {
+      if (timeRange !== 'all') {
         const now = Date.now()
         const ranges: Record<string, number> = {
           '24h': 24 * 60 * 60 * 1000,
@@ -467,7 +463,7 @@ export default function HomePage() {
     }
 
     return result
-  }, [events, timeRange, customTimeRange, searchQuery, filters.eventTypes, filters.selectedCountries, filters.showDistances, filters.userLocation, filters.distanceRadius])
+  }, [events, timeRange, searchQuery, filters.eventTypes, filters.selectedCountries, filters.showDistances, filters.userLocation, filters.distanceRadius])
 
   // ========== CATEGORY BALANCE ==========
   // Apply balanced category distribution before geo separation
@@ -1162,17 +1158,6 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Timeline Slider - Right sidebar */}
-        <TimelineSlider
-          events={events}
-          timeRange={timeRange}
-          onTimeRangeChange={setTimeRange}
-          customRange={customTimeRange}
-          onCustomRangeChange={setCustomTimeRange}
-          theme={theme}
-          isHidden={!!selectedEvent || isSettingsPanelOpen}
-        />
-
         {/* Futuristic Search Bar - Professional Google Earth inspired */}
         <div 
           className={`fixed ${categoryBrowseMode ? 'bottom-36' : 'bottom-20'} left-1/2 -translate-x-1/2 z-30 w-full max-w-lg px-4 transition-all duration-300`}
@@ -1321,13 +1306,15 @@ export default function HomePage() {
           {filters.eventTypes && filters.eventTypes.length > 0 && (
             <div className="flex items-center gap-1.5 text-blue-400">
               <span>⚡</span>
-              <span>{filters.eventTypes.length} categories</span>
+              <span className="hidden sm:inline">{filters.eventTypes.length} categories</span>
+              <span className="sm:hidden">{filters.eventTypes.length}</span>
             </div>
           )}
           {filters.selectedCountries && filters.selectedCountries.length > 0 && (
             <div className="flex items-center gap-1.5 text-purple-400">
               <span>🌍</span>
-              <span>{filters.selectedCountries.length} countries</span>
+              <span className="hidden sm:inline">{filters.selectedCountries.length} countries</span>
+              <span className="sm:hidden">{filters.selectedCountries.length}</span>
             </div>
           )}
           {filters.showDistances && filters.userLocation && (
@@ -1339,11 +1326,22 @@ export default function HomePage() {
           <div className="text-gray-500 hidden sm:block">
             Press <kbd className="bg-white/10 px-1.5 py-0.5 rounded text-gray-300">S</kbd> for settings
           </div>
+          {/* Mobile-only info button (since footer is hidden on mobile) */}
+          <button
+            onClick={() => setShowInfoModal(true)}
+            className="sm:hidden p-1 rounded transition-colors"
+            style={{ color: colors.textMuted }}
+            aria-label="Show info"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </button>
         </div>
 
-        {/* Creation Credit Footer with Info Button */}
+        {/* Creation Credit Footer with Info Button - Hidden on mobile to avoid overlap */}
         <div
-          className="fixed right-4 z-20 flex items-center gap-2"
+          className="fixed right-4 z-20 hidden sm:flex items-center gap-2"
           style={{
             bottom: 'max(16px, env(safe-area-inset-bottom, 16px))',
             fontFamily: 'var(--font-exo2), system-ui, sans-serif',
