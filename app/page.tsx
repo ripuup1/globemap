@@ -260,26 +260,15 @@ const GlobeComponent = dynamic(
   () => import('@/components/Globe/Globe'),
   {
     ssr: false,
-    loading: () => {
-      // Pick a random fact (runs once per mount/refresh)
-      const fact = GLOBE_FACTS[Math.floor(Math.random() * GLOBE_FACTS.length)]
-      return (
-        <div className="flex items-center justify-center h-screen bg-black">
-          <div className="flex flex-col items-center gap-6 px-8 max-w-lg">
-            <div
-              className="w-12 h-12 rounded-full border-2 border-gray-700 border-t-blue-500"
-              style={{ animation: 'spin 1s linear infinite' }}
-            />
-            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-            <p className="text-gray-500 text-center text-sm leading-relaxed">
-              <span className="text-gray-400 font-medium">Did you know?</span>
-              <br />
-              {fact}
-            </p>
-          </div>
-        </div>
-      )
-    },
+    loading: () => (
+      <div className="flex items-center justify-center h-screen bg-black">
+        <div
+          className="w-12 h-12 rounded-full border-2 border-gray-700 border-t-blue-500"
+          style={{ animation: 'spin 1s linear infinite' }}
+        />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    ),
   }
 )
 
@@ -304,7 +293,19 @@ export default function HomePage() {
   const [showInteractionHint, setShowInteractionHint] = useState(false)
   const [showInfoModal, setShowInfoModal] = useState(false)
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false)
+
+  // Fun fact - picked once on mount, shown during initial data fetch
+  const funFact = useRef(GLOBE_FACTS[Math.floor(Math.random() * GLOBE_FACTS.length)])
+  const [showFunFact, setShowFunFact] = useState(true)
   
+  // Hide fun fact once events have loaded
+  useEffect(() => {
+    if (!loading && events.length > 0 && showFunFact) {
+      const timer = setTimeout(() => setShowFunFact(false), 600)
+      return () => clearTimeout(timer)
+    }
+  }, [loading, events.length, showFunFact])
+
   // Check localStorage for hint dismissal
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -976,6 +977,30 @@ export default function HomePage() {
             progress={loadingProgress}
             message={loading ? 'Fetching events...' : 'Processing data...'}
           />
+        )}
+
+        {/* Fun fact overlay - shown during initial data fetch */}
+        {showFunFact && (
+          <div
+            className="fixed inset-0 z-[150] flex items-center justify-center pointer-events-none"
+            style={{
+              opacity: loading ? 1 : 0,
+              transition: 'opacity 0.5s ease-out',
+            }}
+          >
+            <div className="flex flex-col items-center gap-4 px-8 max-w-md text-center">
+              <div
+                className="w-10 h-10 rounded-full border-2 border-gray-700 border-t-blue-500"
+                style={{ animation: 'spin 1s linear infinite' }}
+              />
+              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+              <p className="text-gray-500 text-sm leading-relaxed">
+                <span className="text-gray-400 font-medium">Did you know?</span>
+                <br />
+                {funFact.current}
+              </p>
+            </div>
+          </div>
         )}
 
         {/* Main Globe Container - blurs when any panel is open */}
