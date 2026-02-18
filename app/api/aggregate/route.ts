@@ -78,8 +78,10 @@ function detectCategory(title: string, description: string = ''): EventCategory 
   if (text.match(/\b(protest|demonstration|rally|riot|uprising|revolution|coup|strike|march|activist|protesters|clashes|tear gas|civil unrest)\b/)) return 'civil-unrest'
   if (text.match(/\b(earthquake|quake|seismic|magnitude|richter)\b/)) return 'earthquake'
   if (text.match(/\b(volcano|eruption|lava|volcanic)\b/)) return 'volcano'
-  if (text.match(/\b(wildfire|forest fire|bushfire)\b/)) return 'wildfire'
-  if (text.match(/\b(hurricane|typhoon|cyclone|tornado|storm)\b/)) return 'storm'
+  if (text.match(/\b(wildfire|forest fire|bushfire|blaze|acres burned)\b/)) return 'wildfire'
+  if (text.match(/\b(hurricane|typhoon|cyclone|tornado|storm|blizzard|derecho)\b/)) return 'storm'
+  if (text.match(/\b(tsunami|tidal wave)\b/)) return 'tsunami'
+  if (text.match(/\b(flood|flooding|flash flood|inundation|mudslide|landslide|dam burst)\b/)) return 'flood'
   return 'other'
 }
 

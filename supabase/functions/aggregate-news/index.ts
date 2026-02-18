@@ -76,15 +76,31 @@ function extractAndGeocode(text: string) {
 
 function detectCategory(title: string) {
   const text = title.toLowerCase()
-  if (text.match(/\b(war|military|troops|battle|invasion|airstrike|missile)\b/)) return 'armed-conflict'
-  if (text.match(/\b(terror|terrorist|extremist|isis|hamas|hezbollah)\b/)) return 'terrorism'
-  if (text.match(/\b(breaking|just in|urgent)\b/)) return 'breaking'
-  if (text.match(/\b(election|president|congress|parliament|vote|government)\b/)) return 'politics'
-  if (text.match(/\b(championship|tournament|match|game|nfl|nba)\b/)) return 'sports'
-  if (text.match(/\b(stock|market|economy|trade|billion|company)\b/)) return 'business'
-  if (text.match(/\b(ai|tech|software|app|apple|google|microsoft)\b/)) return 'technology'
-  if (text.match(/\b(earthquake|quake)\b/)) return 'earthquake'
-  if (text.match(/\b(hurricane|typhoon|storm)\b/)) return 'storm'
+
+  // Conflict & Security
+  if (text.match(/\b(war|military|troops|battle|invasion|airstrike|missile|drone strike|artillery|ceasefire|offensive|soldiers|shelling)\b/)) return 'armed-conflict'
+  if (text.match(/\b(terror|terrorist|extremist|isis|hamas|hezbollah|al.?qaeda|jihadist|suicide bomb|car bomb|hostage|militant)\b/)) return 'terrorism'
+  if (text.match(/\b(protest|riot|uprising|demonstrat|civil unrest|coup|revolution|clashes|tear gas|crackdown)\b/)) return 'civil-unrest'
+
+  // Natural Disasters
+  if (text.match(/\b(earthquake|quake|seismic|tremor|aftershock)\b/)) return 'earthquake'
+  if (text.match(/\b(volcano|eruption|volcanic|lava)\b/)) return 'volcano'
+  if (text.match(/\b(wildfire|bushfire|forest fire|blaze)\b/)) return 'wildfire'
+  if (text.match(/\b(hurricane|typhoon|cyclone|tropical storm|tornado|blizzard)\b/)) return 'storm'
+  if (text.match(/\b(tsunami|tidal wave)\b/)) return 'tsunami'
+  if (text.match(/\b(flood|flooding|flash flood|mudslide|landslide)\b/)) return 'flood'
+
+  // News Categories
+  if (text.match(/\b(breaking|just in|urgent|developing story)\b/)) return 'breaking'
+  if (text.match(/\b(election|president|congress|parliament|vote|government|senator|governor|prime minister|diplomatic|treaty|sanctions|nato)\b/)) return 'politics'
+  if (text.match(/\b(murder|arrest|suspect|convicted|sentenced|robbery|fraud|shooting|stabbing|homicide|drug bust|trafficking|prison|fbi|indicted|assault)\b/)) return 'crime'
+  if (text.match(/\b(championship|tournament|match|game|nfl|nba|mlb|nhl|world cup|olympics|soccer|football|tennis|golf|cricket|rugby)\b/)) return 'sports'
+  if (text.match(/\b(stock|market|economy|trade|billion|company|ipo|merger|gdp|inflation|recession|earnings|nasdaq|dow|tariff|bankruptcy)\b/)) return 'business'
+  if (text.match(/\b(ai|artificial intelligence|tech|software|app|apple|google|microsoft|meta|nvidia|openai|semiconductor|cybersecurity|hack|spacex)\b/)) return 'technology'
+  if (text.match(/\b(health|medical|hospital|disease|virus|pandemic|vaccine|outbreak|cancer|surgery|fda|epidemic)\b/)) return 'health'
+  if (text.match(/\b(science|research|discovery|breakthrough|nasa|space|mars|moon|telescope|genome|dna|fossil)\b/)) return 'science'
+  if (text.match(/\b(movie|film|celebrity|oscar|grammy|emmy|album|concert|netflix|disney|entertainment|music|singer|band|festival)\b/)) return 'entertainment'
+
   return 'other'
 }
 

@@ -15,12 +15,12 @@ const GOOGLE_NEWS_FEEDS = {
     { query: 'africa+breaking+news', category: 'breaking' },
     { query: 'africa+politics', category: 'politics' },
     { query: 'africa+economy', category: 'business' },
-    { query: 'africa+climate', category: 'climate' },
+    { query: 'africa+environment+disaster', category: 'breaking' },
   ],
   australia: [
     { query: 'australia+technology', category: 'technology' },
     { query: 'australia+sports', category: 'sports' },
-    { query: 'australia+climate', category: 'climate' },
+    { query: 'australia+environment+disaster', category: 'breaking' },
     { query: 'australia+economy', category: 'business' },
   ],
   asia: [
