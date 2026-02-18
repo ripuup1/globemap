@@ -190,6 +190,29 @@ const RSS_FEEDS = [
   { url: 'https://feeds.bbci.co.uk/news/technology/rss.xml', name: 'BBC Tech' },
 ]
 
+function cleanRssDescription(raw: string): string {
+  return raw
+    .replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, '')
+    .replace(/<img[^>]*>/gi, '')
+    .replace(/<\/(p|div|li|h[1-6])>/gi, ' ')
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&ndash;/g, '\u2013')
+    .replace(/&mdash;/g, '\u2014')
+    .replace(/&[a-z]+;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .substring(0, 300)
+}
+
 function parseRSSItem(itemXml: string) {
   const getTag = (xml: string, tag: string) => {
     const match = xml.match(new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/${tag}>|<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i'))
@@ -199,7 +222,7 @@ function parseRSSItem(itemXml: string) {
   if (!title) return null
   return {
     title,
-    description: getTag(itemXml, 'description').replace(/<[^>]+>/g, '').substring(0, 300),
+    description: cleanRssDescription(getTag(itemXml, 'description')),
     link: getTag(itemXml, 'link'),
     pubDate: getTag(itemXml, 'pubDate') || new Date().toISOString(),
   }

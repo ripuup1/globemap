@@ -148,6 +148,44 @@ function calculateWeight(event: { type: EventCategory; country?: string; contine
 }
 
 // ============================================================================
+// HTML CLEANUP
+// ============================================================================
+
+function cleanHtmlDescription(raw: string): string {
+  return raw
+    // Remove script/style blocks entirely (content + tags)
+    .replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, '')
+    // Remove image tags (prevent alt text garbage)
+    .replace(/<img[^>]*>/gi, '')
+    // Replace block-level closings with spaces
+    .replace(/<\/(p|div|li|h[1-6])>/gi, ' ')
+    .replace(/<br\s*\/?>/gi, ' ')
+    // Strip remaining HTML tags
+    .replace(/<[^>]+>/g, '')
+    // Decode common HTML entities properly
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&#x27;/g, "'")
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&ndash;/g, '\u2013')
+    .replace(/&mdash;/g, '\u2014')
+    .replace(/&hellip;/g, '\u2026')
+    .replace(/&laquo;/g, '\u00AB')
+    .replace(/&raquo;/g, '\u00BB')
+    // Strip any remaining unrecognized entities
+    .replace(/&[a-z]+;/gi, ' ')
+    // Normalize whitespace
+    .replace(/\s+/g, ' ')
+    .trim()
+    .substring(0, 500)
+}
+
+// ============================================================================
 // RSS PARSING
 // ============================================================================
 
@@ -199,7 +237,7 @@ async function fetchRSSFeed(url: string, sourceName: string, maxItems: number = 
     for (const itemXml of itemMatches.slice(0, maxItems)) {
       const item = parseRSSItem(itemXml)
       if (!item) continue
-      const cleanDesc = item.description.replace(/<[^>]+>/g, '').replace(/&[^;]+;/g, ' ').trim().substring(0, 500)
+      const cleanDesc = cleanHtmlDescription(item.description)
       const type = detectCategory(item.title, cleanDesc)
       
       // Try geocoding, use fallback if not found
