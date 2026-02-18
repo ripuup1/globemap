@@ -69,6 +69,11 @@ function WorldAlignLoader({ isVisible, progress }: WorldAlignLoaderProps) {
   const [currentFact, setCurrentFact] = useState(0)
   const [factOpacity, setFactOpacity] = useState(1)
   const [shouldRender, setShouldRender] = useState(true)
+
+  // Randomize starting fact on client mount
+  useEffect(() => {
+    setCurrentFact(Math.floor(Math.random() * GLOBAL_FACTS.length))
+  }, [])
   
   // Track visibility for fade-out then unmount
   // Use timeout for both show/hide to avoid synchronous setState in effect
