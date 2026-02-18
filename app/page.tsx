@@ -1162,7 +1162,7 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Timeline Slider */}
+        {/* Timeline Slider - Right sidebar */}
         <TimelineSlider
           events={events}
           timeRange={timeRange}
@@ -1170,6 +1170,7 @@ export default function HomePage() {
           customRange={customTimeRange}
           onCustomRangeChange={setCustomTimeRange}
           theme={theme}
+          isHidden={!!selectedEvent || isSettingsPanelOpen}
         />
 
         {/* Futuristic Search Bar - Professional Google Earth inspired */}
