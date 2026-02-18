@@ -15,7 +15,6 @@ import { Event } from '@/types/event'
 import { GlobeMarker } from './MarkerSystem'
 import { createStyleProvider, MarkerStyleStrategy } from './markerStyles'
 import { getVisibleLabels, getLabelStyle, GeoLabel } from '@/data/geoLabels'
-import { ThemeMode } from '@/components/UI/ThemeToggle'
 import { GeoClusterManager, ClusterConfig, prioritizeClusters } from './GeoClusterEngine'
 import ClusterCarousel from '@/components/UI/ClusterCarousel'
 
@@ -138,7 +137,6 @@ interface GlobeComponentProps {
   highlightedEventIds?: string[]
   /** When set, only these event IDs will be visible (for country filter isolation) */
   isolatedEventIds?: string[] | null
-  theme?: ThemeMode
   showLabels?: boolean
 }
 
@@ -173,7 +171,6 @@ function GlobeComponent({
   flyToTarget = null,
   highlightedEventIds = [],
   isolatedEventIds = null,
-  theme = 'dark',
   showLabels = true,
 }: GlobeComponentProps) {
   const globeRef = useRef<any>(null)
@@ -304,18 +301,56 @@ function GlobeComponent({
       const markers: GlobeMarker[] = []
       
       if (isMobile) {
-        // MOBILE: Show all events as individual markers (no clustering)
-        for (const event of processedEvents) {
-          const style = styleProvider.getStyle(event)
+        // MOBILE: Use clustering with more aggressive settings to reduce marker count
+        const clusterConfig: ClusterConfig = {
+          altitude: currentAltitude,
+          maxClusters: 200,
+          isMobile: true,
+          cityDeduplicationRadius: 50,
+          capitalAggregation: true,
+        }
+
+        const rawClusterResult = clusterManager.cluster(processedEvents, clusterConfig)
+        const clusterResult = prioritizeClusters(rawClusterResult, cameraCenter, {
+          maxAngle: 60,
+          includeOutside: true,
+        })
+
+        for (const single of clusterResult.singles) {
+          const style = styleProvider.getStyle(single.primary)
           markers.push({
-            id: event.id,
-            lat: event.latitude,
-            lng: event.longitude,
+            id: single.id,
+            lat: single.lat,
+            lng: single.lng,
             size: 8,
             color: style.color,
             priority: style.priority,
             markerType: style.markerType,
-            event: event,
+            event: single.primary,
+            opacity: 1,
+            glow: style.glow ?? 0,
+          })
+        }
+
+        for (const cluster of clusterResult.clusters) {
+          const style = styleProvider.getStyle(cluster.primary)
+          markers.push({
+            id: cluster.id,
+            lat: cluster.lat,
+            lng: cluster.lng,
+            size: 10,
+            color: style.color,
+            priority: cluster.totalWeight,
+            markerType: 'circle',
+            event: {
+              ...cluster.primary,
+              metadata: {
+                ...cluster.primary.metadata,
+                isCluster: true,
+                clusterCount: cluster.events.length,
+                clusterEvents: cluster.events,
+              },
+            },
             opacity: 1,
             glow: style.glow ?? 0,
           })
@@ -535,6 +570,11 @@ function GlobeComponent({
     // When isolation is active, non-isolated markers are hidden with scale+fade
     const shouldHide = isolatedEventIds && isolatedEventIds.length > 0 && !isIsolated
 
+    // Check if this marker is highlighted (category browse mode)
+    const isHighlighted = highlightedEventIds.length > 0 && highlightedEventIds.includes(marker.event.id)
+    // When highlights are active, dim non-highlighted markers
+    const shouldDim = highlightedEventIds.length > 0 && !isHighlighted
+
     const size = Math.round((isCluster ? 30 : 24) * markerScale)
     const iconSize = Math.round((isCluster ? 14 : 12) * markerScale)
 
@@ -548,7 +588,7 @@ function GlobeComponent({
       align-items: center;
       cursor: ${shouldHide ? 'default' : 'pointer'};
       pointer-events: ${shouldHide ? 'none' : 'auto'};
-      opacity: ${shouldHide ? '0' : '1'};
+      opacity: ${shouldHide ? '0' : shouldDim ? '0.3' : '1'};
       transition: opacity 0.35s ease;
     `
 
@@ -559,8 +599,8 @@ function GlobeComponent({
       height: ${size}px;
       border-radius: 50%;
       background: rgba(15, 23, 42, 0.9);
-      border: 1.5px solid ${color};
-      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      border: ${isHighlighted ? '2.5px' : '1.5px'} solid ${color};
+      box-shadow: ${isHighlighted ? `0 0 16px ${color}80, 0 0 8px ${color}40` : '0 2px 8px rgba(0,0,0,0.4)'};
       display: flex;
       align-items: center;
       justify-content: center;
@@ -687,16 +727,13 @@ function GlobeComponent({
     }
 
     return container
-  }, [markerScale, onMarkerClick, isolatedEventIds])
+  }, [markerScale, onMarkerClick, isolatedEventIds, highlightedEventIds])
 
   const createLabelElement = useCallback((label: GeoLabel) => {
     const style = getLabelStyle(label, currentAltitude, activeNewsRegions)
     const div = document.createElement('div')
     div.className = 'geo-label'
-    const isLight = theme === 'light'
-    const textColor = isLight 
-      ? `rgba(15,23,42,${style.opacity})` 
-      : `rgba(255,255,255,${style.opacity})`
+    const textColor = `rgba(255,255,255,${style.opacity})`
     div.style.cssText = `
       font-family: system-ui, sans-serif;
       font-size: ${style.fontSize}px;
@@ -711,7 +748,7 @@ function GlobeComponent({
     `
     div.textContent = label.name
     return div
-  }, [currentAltitude, activeNewsRegions, theme])
+  }, [currentAltitude, activeNewsRegions])
 
   // ========== GRID LINES DATA ==========
   // Latitude/longitude grid lines (very subtle, opacity 0.05-0.10)
@@ -734,10 +771,8 @@ function GlobeComponent({
 
   // ========== RENDER ==========
   const shouldBlur = isDetailPanelOpen || isSettingsPanelOpen || isModalOpen || openCluster !== null
-  const globeImage = theme === 'light' 
-    ? '//unpkg.com/three-globe/example/img/earth-day.jpg' 
-    : '//unpkg.com/three-globe/example/img/earth-blue-marble.jpg'
-  const bgImage = theme === 'light' ? '' : '//unpkg.com/three-globe/example/img/night-sky.png'
+  const globeImage = '//unpkg.com/three-globe/example/img/earth-blue-marble.jpg'
+  const bgImage = '//unpkg.com/three-globe/example/img/night-sky.png'
 
   const closeCluster = useCallback(() => setOpenCluster(null), [])
 
@@ -767,9 +802,7 @@ function GlobeComponent({
         style={{
           transition: 'opacity 0.3s ease-out',
           opacity: shouldBlur ? 0.6 : 1,
-          background: theme === 'light'
-            ? 'linear-gradient(135deg, #87ceeb, #add8e6)'
-            : '#0a0a0a',
+          background: '#0a0a0a',
         }}
       >
         <Globe
@@ -783,7 +816,7 @@ function GlobeComponent({
           htmlTransitionDuration={0}
           htmlElement={(d: any) => d._type === 'label' ? createLabelElement(d.label) : createMarkerElement(d)}
           enablePointerInteraction={!isDetailPanelOpen && !openCluster}
-          atmosphereColor={theme === 'light' ? '#87ceeb' : '#3b5998'}
+          atmosphereColor="#3b5998"
           atmosphereAltitude={0.15}
           {...({ onZoom: handleZoom } as any)}
         />
