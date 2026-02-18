@@ -26,6 +26,11 @@ import { balanceCategories } from '@/utils/categoryBalance'
 import { extractCountriesFromEvents, getCountryKey } from '@/utils/countryExtractor'
 import { calculateDistance } from '@/utils/geo'
 import { SEARCH_SYNONYMS } from '@/utils/searchSynonyms'
+import { useBookmarks } from '@/hooks/useBookmarks'
+import { getThemeColors } from '@/utils/themeColors'
+import { useTopics } from '@/hooks/useTopics'
+import TrendingSidebar from '@/components/UI/TrendingSidebar'
+import TimelineSlider from '@/components/UI/TimelineSlider'
 
 // ============================================================================
 // WORLD ALIGN LOADER
@@ -276,7 +281,9 @@ export default function HomePage() {
   // ========== DATA FETCHING ==========
   // Simplified: fetch starts immediately, loading screen handles UX
   const { events, loading, processing, error, loadingProgress, refetch } = useEvents()
-  
+  const { bookmarkedIds, toggleBookmark, isBookmarked } = useBookmarks()
+  const { topics } = useTopics(events)
+
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [filters, setFilters] = useState<ExtendedFilterState>({
     severity: 'all',
@@ -288,6 +295,7 @@ export default function HomePage() {
   })
   const [searchQuery, setSearchQuery] = useState('')
   const [timeRange, setTimeRange] = useState('all')
+  const [customTimeRange, setCustomTimeRange] = useState<{ start: number; end: number } | null>(null)
   const [globeZoom, setGlobeZoom] = useState<number>(1.0)
   const [globeAltitude, setGlobeAltitude] = useState<number>(2.5)
   const [showInteractionHint, setShowInteractionHint] = useState(false)
@@ -345,6 +353,7 @@ export default function HomePage() {
   
   // Theme state (dark/light mode)
   const [theme, setTheme] = useState<ThemeMode>('dark')
+  const colors = getThemeColors(theme)
 
   // Listen for theme changes from settings panel (Option 12A)
   useEffect(() => {
@@ -375,7 +384,9 @@ export default function HomePage() {
   const filteredEvents = useMemo(() => {
     let result = events.filter(event => {
       // Time range filter
-      if (timeRange !== 'all') {
+      if (timeRange === 'custom' && customTimeRange) {
+        if (event.timestamp < customTimeRange.start) return false
+      } else if (timeRange !== 'all') {
         const now = Date.now()
         const ranges: Record<string, number> = {
           '24h': 24 * 60 * 60 * 1000,
@@ -456,7 +467,7 @@ export default function HomePage() {
     }
 
     return result
-  }, [events, timeRange, searchQuery, filters.eventTypes, filters.selectedCountries, filters.showDistances, filters.userLocation, filters.distanceRadius])
+  }, [events, timeRange, customTimeRange, searchQuery, filters.eventTypes, filters.selectedCountries, filters.showDistances, filters.userLocation, filters.distanceRadius])
 
   // ========== CATEGORY BALANCE ==========
   // Apply balanced category distribution before geo separation
@@ -946,6 +957,16 @@ export default function HomePage() {
           <VoxTerraLogo size="md" showTagline={false} />
         </div>
 
+        {/* Trending Topics Sidebar */}
+        <TrendingSidebar
+          topics={topics}
+          onTopicClick={(topic) => {
+            enterCategoryBrowseMode(topic.keywords[0] || topic.name, topic.name, '')
+          }}
+          theme={theme}
+          isHidden={!!selectedEvent || isSettingsPanelOpen}
+        />
+
         {/* Theme Toggle - Top Right (hidden on mobile, moved to satellite settings) */}
         <div 
           className="fixed top-4 right-4 z-40 theme-toggle-desktop"
@@ -1034,6 +1055,8 @@ export default function HomePage() {
           globeAltitude={globeAltitude}
           theme={theme}
           onSettingsOpenChange={setIsSettingsPanelOpen}
+          bookmarkedIds={bookmarkedIds}
+          onSelectEvent={(ev) => setSelectedEvent(ev)}
         />
 
 
@@ -1046,6 +1069,9 @@ export default function HomePage() {
             onNavigateToEvent={navigateToEvent}
             canGoBack={eventHistory.length > 0}
             onGoBack={goBackInHistory}
+            isBookmarked={isBookmarked(selectedEvent.id)}
+            onToggleBookmark={toggleBookmark}
+            theme={theme}
           />
         )}
 
@@ -1136,6 +1162,16 @@ export default function HomePage() {
           </div>
         )}
 
+        {/* Timeline Slider */}
+        <TimelineSlider
+          events={events}
+          timeRange={timeRange}
+          onTimeRangeChange={setTimeRange}
+          customRange={customTimeRange}
+          onCustomRangeChange={setCustomTimeRange}
+          theme={theme}
+        />
+
         {/* Futuristic Search Bar - Professional Google Earth inspired */}
         <div 
           className={`fixed ${categoryBrowseMode ? 'bottom-36' : 'bottom-20'} left-1/2 -translate-x-1/2 z-30 w-full max-w-lg px-4 transition-all duration-300`}
@@ -1146,11 +1182,15 @@ export default function HomePage() {
             role="search"
             aria-label="Search events, regions, and categories"
             style={{
-              background: 'linear-gradient(135deg, rgba(17, 24, 39, 0.92) 0%, rgba(30, 41, 59, 0.92) 100%)',
+              background: theme === 'dark'
+                ? 'linear-gradient(135deg, rgba(17, 24, 39, 0.92) 0%, rgba(30, 41, 59, 0.92) 100%)'
+                : 'linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(241, 245, 249, 0.92) 100%)',
               backdropFilter: 'blur(20px)',
               borderRadius: '14px',
-              border: '1px solid rgba(99, 102, 241, 0.15)',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
+              border: `1px solid ${theme === 'dark' ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.25)'}`,
+              boxShadow: theme === 'dark'
+                ? '0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05)'
+                : '0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04)',
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             }}
           >
@@ -1180,9 +1220,9 @@ export default function HomePage() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search events, regions, categories..."
                 aria-label="Search events, regions, and categories"
-                className="flex-1 bg-transparent text-white text-sm placeholder-gray-500 focus:outline-none tracking-wide"
+                className="flex-1 bg-transparent text-sm focus:outline-none tracking-wide"
                 autoComplete="off"
-                style={{ caretColor: '#818cf8' }}
+                style={{ caretColor: '#818cf8', color: colors.textPrimary }}
               />
               {/* Keyboard shortcut hint - hides when typing */}
               {!searchQuery && (
@@ -1266,9 +1306,9 @@ export default function HomePage() {
           className="fixed left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 px-4 py-2 rounded-full text-xs"
           style={{
             bottom: 'max(16px, env(safe-area-inset-bottom, 16px))',
-            background: 'rgba(17, 24, 39, 0.85)',
+            background: colors.barBg,
             backdropFilter: 'blur(12px)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            border: `1px solid ${colors.barBorder}`,
           }}
         >
           <div className="flex items-center gap-1.5">
@@ -1311,11 +1351,12 @@ export default function HomePage() {
           {/* Info button */}
           <button
             onClick={() => setShowInfoModal(true)}
-            className="p-2 rounded-lg text-gray-400 hover:text-white transition-colors"
+            className="p-2 rounded-lg transition-colors"
             style={{
-              background: 'rgba(17, 24, 39, 0.6)',
+              background: colors.barBg,
               backdropFilter: 'blur(8px)',
-              border: '1px solid rgba(255, 255, 255, 0.05)',
+              border: `1px solid ${colors.borderSubtle}`,
+              color: colors.textMuted,
             }}
             title="Press 'I' for info"
           >
@@ -1323,15 +1364,16 @@ export default function HomePage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </button>
-          
+
           {/* Shortcuts help button - HIDDEN ON MOBILE (#5) */}
           <button
             onClick={() => setShowShortcutsHelp(true)}
-            className="keyboard-shortcuts p-2 rounded-lg text-gray-400 hover:text-white transition-colors hidden sm:block"
+            className="keyboard-shortcuts p-2 rounded-lg transition-colors hidden sm:block"
             style={{
-              background: 'rgba(17, 24, 39, 0.6)',
+              background: colors.barBg,
               backdropFilter: 'blur(8px)',
-              border: '1px solid rgba(255, 255, 255, 0.05)',
+              border: `1px solid ${colors.borderSubtle}`,
+              color: colors.textMuted,
             }}
             title="Press '?' for shortcuts"
           >
@@ -1339,14 +1381,14 @@ export default function HomePage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
             </svg>
           </button>
-          
+
           {/* Credit */}
-          <div 
+          <div
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
             style={{
-              background: 'rgba(17, 24, 39, 0.6)',
+              background: colors.barBg,
               backdropFilter: 'blur(8px)',
-              border: '1px solid rgba(255, 255, 255, 0.05)',
+              border: `1px solid ${colors.borderSubtle}`,
               opacity: 0.7,
             }}
           >
@@ -1361,22 +1403,21 @@ export default function HomePage() {
             className="fixed inset-0 z-[100] flex items-center justify-center p-4"
             onClick={() => setShowInfoModal(false)}
           >
-            {/* Solid backdrop to hide all background elements including markers */}
-            <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
-            <div 
+            <div className="absolute inset-0 backdrop-blur-md" style={{ background: colors.modalBackdrop }} />
+            <div
               className="relative max-w-lg w-full rounded-2xl p-6 overflow-hidden"
               style={{
-                background: 'linear-gradient(135deg, rgba(17, 24, 39, 0.98) 0%, rgba(30, 41, 59, 0.98) 100%)',
-                border: '1px solid rgba(99, 102, 241, 0.2)',
-                boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5), 0 0 40px rgba(99, 102, 241, 0.1)',
+                background: colors.modalBg,
+                border: `1px solid ${colors.modalBorder}`,
+                boxShadow: '0 25px 50px rgba(0, 0, 0, 0.3), 0 0 40px rgba(99, 102, 241, 0.1)',
                 fontFamily: 'var(--font-exo2), system-ui, sans-serif',
               }}
               onClick={e => e.stopPropagation()}
             >
               {/* Glow accent */}
               <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent" />
-              
-              <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+
+              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2" style={{ color: colors.textPrimary }}>
                 <span className="text-2xl">🌍</span>
                 How We Source & Weight News
               </h2>
@@ -1419,21 +1460,20 @@ export default function HomePage() {
             className="fixed inset-0 z-[100] flex items-center justify-center p-4"
             onClick={() => setShowShortcutsHelp(false)}
           >
-            {/* Solid backdrop to hide all background elements including markers */}
-            <div className="absolute inset-0 bg-black/80 backdrop-blur-md" />
-            <div 
+            <div className="absolute inset-0 backdrop-blur-md" style={{ background: colors.modalBackdrop }} />
+            <div
               className="relative max-w-md w-full rounded-2xl p-6 overflow-hidden"
               style={{
-                background: 'linear-gradient(135deg, rgba(17, 24, 39, 0.98) 0%, rgba(30, 41, 59, 0.98) 100%)',
-                border: '1px solid rgba(99, 102, 241, 0.2)',
-                boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5), 0 0 40px rgba(99, 102, 241, 0.1)',
+                background: colors.modalBg,
+                border: `1px solid ${colors.modalBorder}`,
+                boxShadow: '0 25px 50px rgba(0, 0, 0, 0.3), 0 0 40px rgba(99, 102, 241, 0.1)',
                 fontFamily: 'var(--font-exo2), system-ui, sans-serif',
               }}
               onClick={e => e.stopPropagation()}
             >
               <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent" />
-              
-              <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+
+              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2" style={{ color: colors.textPrimary }}>
                 <span className="text-2xl">⌨️</span>
                 Keyboard Shortcuts
               </h2>

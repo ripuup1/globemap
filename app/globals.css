@@ -143,6 +143,20 @@ html.light-mode body {
   background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 50%, #e0e7ff 100%);
 }
 
+html.light-mode .scrollbar-thin {
+  scrollbar-color: rgba(0,0,0,0.12) transparent;
+}
+html.light-mode .scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.12);
+}
+html.light-mode .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(0,0,0,0.2);
+}
+html.light-mode .settings-panel::-webkit-scrollbar-thumb,
+html.light-mode .event-detail-panel::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+}
+
 /* =============================================================================
    TOUCH BEHAVIOR
    ============================================================================= */

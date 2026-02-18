@@ -15,6 +15,7 @@ import { getSeverityLabel, getSeverityColor } from '@/utils/severity'
 import { validateUrl, validateEventForRender, formatCoordinates } from '@/utils/validation'
 import { capitalizeCountry, capitalizeCity, capitalizeLocation } from '@/utils/capitalization'
 import { getCategoryColor, getIconInfo } from '../Globe/markerIcons'
+import { getThemeColors } from '@/utils/themeColors'
 
 interface EventDetailPanelProps {
   event: Event | null
@@ -23,6 +24,9 @@ interface EventDetailPanelProps {
   onNavigateToEvent?: (event: Event) => void // For drill-down navigation
   canGoBack?: boolean // Show back button if there's history
   onGoBack?: () => void // Go back in navigation history
+  isBookmarked?: boolean
+  onToggleBookmark?: (eventId: string) => void
+  theme?: 'dark' | 'light'
 }
 
 interface AggregatedSource {
@@ -44,13 +48,16 @@ interface WikipediaData {
   url: string
 }
 
-function EventDetailPanel({ 
-  event: eventProp, 
-  onClose, 
+function EventDetailPanel({
+  event: eventProp,
+  onClose,
   allEvents = [],
   onNavigateToEvent,
   canGoBack = false,
   onGoBack,
+  isBookmarked = false,
+  onToggleBookmark,
+  theme = 'dark',
 }: EventDetailPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
@@ -191,6 +198,14 @@ function EventDetailPanel({
     const isOngoing = event.isOngoing || event.metadata?.isOngoing || false
     const continent = event.metadata?.continent as string || ''
     
+    // Source diversity classification
+    const sourceCount = allSources.length
+    const sourceDiversity = sourceCount >= 4
+      ? { label: 'Well-covered', color: '#22c55e', bg: 'rgba(34, 197, 94, 0.15)' }
+      : sourceCount >= 2
+        ? { label: 'Verified', color: '#4ade80', bg: 'rgba(74, 222, 128, 0.12)' }
+        : { label: 'Single source', color: '#eab308', bg: 'rgba(234, 179, 8, 0.12)' }
+
     return {
       event,
       articles,
@@ -213,6 +228,7 @@ function EventDetailPanel({
       isOngoing,
       continent,
       iconInfo: getIconInfo(event.type, event.severity),
+      sourceDiversity,
     }
   }, [eventProp])
 
@@ -258,13 +274,16 @@ function EventDetailPanel({
       .slice(0, 4)
   }, [processedEvent, allEvents])
 
+  const tc = getThemeColors(theme)
+
   if (!processedEvent) return null
 
-  const { 
-    event, allSources, hasMultipleSources, severityLabel, severityColor, 
-    categoryColor, locationName, country, primarySourceName, 
+  const {
+    event, allSources, hasMultipleSources, severityLabel, severityColor,
+    categoryColor, locationName, country, primarySourceName,
     primaryUrl, isPrimaryUrlValid, locationConfidence, weightScore,
-    timeline, startDate, isOngoing, continent, iconInfo, formattedCoords
+    timeline, startDate, isOngoing, continent, iconInfo, formattedCoords,
+    sourceDiversity
   } = processedEvent
 
   const formatTime = (ts: number | string) => {
@@ -318,9 +337,13 @@ function EventDetailPanel({
         className={`event-detail-panel fixed right-0 top-0 h-full w-full sm:max-w-md z-50 overflow-y-auto transition-transform duration-300 ease-out ${isVisible ? 'translate-x-0' : 'translate-x-full'}`}
         style={{
           fontFamily: 'var(--font-exo2), system-ui, sans-serif',
-          background: `linear-gradient(180deg, rgba(8, 12, 24, 0.98) 0%, rgba(15, 23, 42, 0.98) 50%, rgba(20, 30, 55, 0.98) 100%)`,
+          background: theme === 'dark'
+            ? `linear-gradient(180deg, rgba(8, 12, 24, 0.98) 0%, rgba(15, 23, 42, 0.98) 50%, rgba(20, 30, 55, 0.98) 100%)`
+            : `linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.98) 50%, rgba(241, 245, 249, 0.98) 100%)`,
           backdropFilter: 'blur(20px)',
-          boxShadow: `-12px 0 40px rgba(0, 0, 0, 0.6), inset 1px 0 0 rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.15)`,
+          boxShadow: theme === 'dark'
+            ? `-12px 0 40px rgba(0, 0, 0, 0.6), inset 1px 0 0 rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.15)`
+            : `-12px 0 40px rgba(0, 0, 0, 0.1), inset 1px 0 0 rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.15)`,
           borderLeft: `1px solid rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.2)`,
         }}
         role="dialog"
@@ -365,7 +388,7 @@ function EventDetailPanel({
                     </span>
                   )}
                 </div>
-                <h2 id="event-detail-title" className="text-lg font-bold text-white leading-tight line-clamp-2">
+                <h2 id="event-detail-title" className="text-lg font-bold leading-tight line-clamp-2" style={{ color: tc.textPrimary }}>
                   {event.title}
                 </h2>
               </div>
@@ -382,6 +405,21 @@ function EventDetailPanel({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
                   <span className="text-xs hidden sm:inline">Back</span>
+                </button>
+              )}
+              {/* Bookmark star */}
+              {onToggleBookmark && eventProp && (
+                <button
+                  onClick={() => onToggleBookmark(eventProp.id)}
+                  className="p-2 rounded-lg transition-all"
+                  style={{
+                    color: isBookmarked ? '#f59e0b' : '#6b7280',
+                  }}
+                  aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark event'}
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill={isBookmarked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                  </svg>
                 </button>
               )}
               <button
@@ -517,7 +555,7 @@ function EventDetailPanel({
           {/* Description - Enhanced */}
           {event.description && (
             <div className="mb-5">
-              <p className="text-gray-300 text-sm leading-relaxed line-clamp-6">
+              <p className="text-sm leading-relaxed line-clamp-6" style={{ color: tc.textSecondary }}>
                 {event.description}
               </p>
             </div>
@@ -526,65 +564,68 @@ function EventDetailPanel({
           {/* Info Grid - Futuristic cards with Exo 2 */}
           <div className="grid grid-cols-3 gap-2 mb-5">
             {/* Severity */}
-            <div 
+            <div
               className="rounded-xl p-3 relative overflow-hidden"
               style={{
-                background: `linear-gradient(135deg, rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%)`,
-                border: '1px solid rgba(255, 255, 255, 0.06)',
+                background: `linear-gradient(135deg, rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.05) 0%, ${tc.cardBg} 100%)`,
+                border: `1px solid ${tc.borderSubtle}`,
               }}
             >
-              <div className="text-[9px] text-gray-500 uppercase tracking-wider mb-1.5 font-medium">Severity</div>
+              <div className="text-[9px] uppercase tracking-wider mb-1.5 font-medium" style={{ color: tc.textMuted }}>Severity</div>
               <div className="flex items-center gap-1.5">
-                <div 
-                  className="w-2.5 h-2.5 rounded-full" 
-                  style={{ 
+                <div
+                  className="w-2.5 h-2.5 rounded-full"
+                  style={{
                     backgroundColor: severityColor,
                     boxShadow: `0 0 10px ${severityColor}60`,
-                  }} 
+                  }}
                 />
-                <span className="text-sm text-white font-semibold">{event.severity}</span>
-                <span className="text-[10px] text-gray-500">/10</span>
+                <span className="text-sm font-semibold" style={{ color: tc.textPrimary }}>{event.severity}</span>
+                <span className="text-[10px]" style={{ color: tc.textMuted }}>/10</span>
               </div>
             </div>
-            
-            {/* Sources Count */}
-            <div 
+
+            {/* Sources Count + Diversity */}
+            <div
               className="rounded-xl p-3 relative overflow-hidden"
               style={{
-                background: `linear-gradient(135deg, rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%)`,
-                border: '1px solid rgba(255, 255, 255, 0.06)',
+                background: `linear-gradient(135deg, rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.05) 0%, ${tc.cardBg} 100%)`,
+                border: `1px solid ${tc.borderSubtle}`,
               }}
             >
-              <div className="text-[9px] text-gray-500 uppercase tracking-wider mb-1.5 font-medium">Sources</div>
+              <div className="text-[9px] uppercase tracking-wider mb-1.5 font-medium" style={{ color: tc.textMuted }}>Sources</div>
               <div className="flex items-center gap-1.5">
-                <span className="text-sm text-white font-semibold">{allSources.length}</span>
-                {hasMultipleSources && (
-                  <span className="text-[9px] px-1 py-0.5 rounded" style={{ background: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.2)`, color: categoryColor }}>+</span>
-                )}
+                <span className="text-sm font-semibold" style={{ color: tc.textPrimary }}>{allSources.length}</span>
+                <span
+                  className="text-[8px] px-1.5 py-0.5 rounded-full font-medium"
+                  style={{ background: sourceDiversity.bg, color: sourceDiversity.color }}
+                >
+                  {sourceDiversity.label}
+                </span>
               </div>
             </div>
             
             {/* Accuracy */}
-            <div 
+            <div
               className="rounded-xl p-3 relative overflow-hidden"
               style={{
-                background: `linear-gradient(135deg, rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%)`,
-                border: '1px solid rgba(255, 255, 255, 0.06)',
+                background: `linear-gradient(135deg, rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.05) 0%, ${tc.cardBg} 100%)`,
+                border: `1px solid ${tc.borderSubtle}`,
               }}
             >
-              <div className="text-[9px] text-gray-500 uppercase tracking-wider mb-1.5 font-medium">Accuracy</div>
+              <div className="text-[9px] uppercase tracking-wider mb-1.5 font-medium" style={{ color: tc.textMuted }}>Accuracy</div>
               <div className="flex items-center gap-1.5">
-                <div className="flex-1 h-1 bg-gray-800 rounded-full overflow-hidden">
-                  <div 
+                <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: theme === 'dark' ? '#1f2937' : '#e2e8f0' }}>
+                  <div
                     className="h-full rounded-full transition-all duration-500"
-                    style={{ 
+                    style={{
                       width: `${confidencePercent}%`,
                       backgroundColor: confidencePercent > 70 ? '#22c55e' : confidencePercent > 40 ? '#eab308' : '#ef4444',
                       boxShadow: `0 0 6px ${confidencePercent > 70 ? '#22c55e' : confidencePercent > 40 ? '#eab308' : '#ef4444'}50`,
                     }}
                   />
                 </div>
-                <span className="text-[10px] text-gray-400 font-mono">{confidencePercent}%</span>
+                <span className="text-[10px] font-mono" style={{ color: tc.textSecondary }}>{confidencePercent}%</span>
               </div>
             </div>
           </div>
