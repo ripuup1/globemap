@@ -54,8 +54,8 @@ export default function InstallPrompt() {
 
   return (
     <div
-      className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] w-full max-w-sm px-4"
-      style={{ animation: 'fadeSlideDown 0.4s ease-out' }}
+      className="fixed left-1/2 -translate-x-1/2 z-[60] w-full max-w-sm px-4"
+      style={{ top: 'max(16px, env(safe-area-inset-top, 16px))', animation: 'fadeSlideDown 0.4s ease-out' }}
     >
       <style>{`
         @keyframes fadeSlideDown {

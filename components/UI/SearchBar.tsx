@@ -83,8 +83,11 @@ export default function SearchBar({ filteredEventsCount, onEnterBrowseMode }: Se
 
   return (
     <div
-      className={`fixed ${categoryBrowseMode ? 'bottom-36' : 'bottom-20'} left-1/2 -translate-x-1/2 z-30 w-full max-w-lg px-4 transition-all duration-300`}
-      style={{ fontFamily: 'var(--font-exo2), system-ui, sans-serif' }}
+      className="fixed left-1/2 -translate-x-1/2 z-35 w-full max-w-lg px-4 transition-all duration-300"
+      style={{
+        fontFamily: 'var(--font-exo2), system-ui, sans-serif',
+        bottom: categoryBrowseMode ? 'max(144px, calc(144px + env(safe-area-inset-bottom, 0px)))' : 'max(64px, calc(64px + env(safe-area-inset-bottom, 0px)))',
+      }}
     >
       <div
         className="relative group"

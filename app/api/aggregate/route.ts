@@ -28,9 +28,10 @@ const WEIGHT_CONFIG = {
   CONFLICT_WEIGHT: 2.5,
   TERRORISM_WEIGHT: 2.3,
   BREAKING_WEIGHT: 1.6,
-  AFRICA_WEIGHT: 1.6,
+  AFRICA_WEIGHT: 2.0,
   EUROPE_WEIGHT: 1.4,
-  ASIA_WEIGHT: 1.3,
+  ASIA_WEIGHT: 1.8,
+  SE_ASIA_WEIGHT: 2.0,
 }
 
 // EXPANDED: 23 RSS Feeds with higher item limits (global diversity)
@@ -65,8 +66,26 @@ const RSS_FEEDS = [
   // Europe (non-English origin)
   { url: 'https://rss.dw.com/rdf/rss-en-all', name: 'DW News', maxItems: 25 },
   { url: 'https://www.france24.com/en/rss', name: 'France 24', maxItems: 25 },
-  // Africa
+  // Africa - EXPANDED
   { url: 'https://nation.africa/service/rss/feeds/news.rss', name: 'Nation Africa', maxItems: 20 },
+  { url: 'https://allafrica.com/tools/headlines/rdf/latest/headlines.rdf', name: 'AllAfrica', maxItems: 25 },
+  { url: 'https://www.dailymaverick.co.za/rss/', name: 'Daily Maverick', maxItems: 20 },
+  { url: 'https://www.premiumtimesng.com/feed', name: 'Premium Times NG', maxItems: 20 },
+  // South America
+  { url: 'https://www.batimes.com.ar/feed', name: 'Buenos Aires Times', maxItems: 20 },
+  { url: 'https://en.mercopress.com/rss', name: 'MercoPress', maxItems: 20 },
+  { url: 'https://brazilreports.com/feed/', name: 'Brazil Reports', maxItems: 15 },
+  // Asia - North (East Asia)
+  { url: 'https://en.yna.co.kr/RSS/news.xml', name: 'Yonhap Korea', maxItems: 25 },
+  { url: 'https://www.japantimes.co.jp/feed/', name: 'Japan Times', maxItems: 20 },
+  { url: 'https://www.koreaherald.com/rss', name: 'Korea Herald', maxItems: 20 },
+  // Asia - Southeast
+  { url: 'https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml', name: 'CNA Singapore', maxItems: 25 },
+  { url: 'https://www.bangkokpost.com/rss/data/topstories.xml', name: 'Bangkok Post', maxItems: 20 },
+  { url: 'https://www.rappler.com/feed/', name: 'Rappler PH', maxItems: 20 },
+  // India / South Asia
+  { url: 'https://timesofindia.indiatimes.com/rssfeedstopstories.cms', name: 'Times of India', maxItems: 25 },
+  { url: 'https://www.dawn.com/feeds/home', name: 'Dawn Pakistan', maxItems: 20 },
 ]
 
 // ============================================================================
@@ -131,7 +150,14 @@ function calculateWeight(event: { type: EventCategory; country?: string; contine
   } else if (continent === 'europe') {
     weight = WEIGHT_CONFIG.EUROPE_WEIGHT
   } else if (continent === 'asia') {
-    weight = WEIGHT_CONFIG.ASIA_WEIGHT
+    // Boost SE Asia and South Asia countries specifically
+    const seAsiaCountries = ['indonesia', 'philippines', 'vietnam', 'thailand', 'malaysia', 'singapore', 'myanmar', 'cambodia', 'laos']
+    const sAsiaCountries = ['india', 'pakistan', 'bangladesh', 'sri lanka', 'nepal']
+    if (seAsiaCountries.includes(country) || sAsiaCountries.includes(country)) {
+      weight = WEIGHT_CONFIG.SE_ASIA_WEIGHT
+    } else {
+      weight = WEIGHT_CONFIG.ASIA_WEIGHT
+    }
   }
   
   // Type-based boosts

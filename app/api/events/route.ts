@@ -220,8 +220,11 @@ const RSS_FEEDS = [
   { url: 'https://feeds.bbci.co.uk/news/world/rss.xml', name: 'BBC World' },
   { url: 'https://www.aljazeera.com/xml/rss/all.xml', name: 'Al Jazeera' },
   { url: 'https://feeds.reuters.com/reuters/topNews', name: 'Reuters' },
-  { url: 'https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml', name: 'NYT Tech' },
-  { url: 'https://feeds.bbci.co.uk/news/technology/rss.xml', name: 'BBC Tech' },
+  { url: 'https://feeds.bbci.co.uk/news/world/africa/rss.xml', name: 'BBC Africa' },
+  { url: 'https://feeds.bbci.co.uk/news/world/asia/rss.xml', name: 'BBC Asia' },
+  { url: 'https://feeds.bbci.co.uk/news/world/latin_america/rss.xml', name: 'BBC LatAm' },
+  { url: 'https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml', name: 'CNA Singapore' },
+  { url: 'https://timesofindia.indiatimes.com/rssfeedstopstories.cms', name: 'Times of India' },
 ]
 
 function cleanRssTitle(raw: string): string {

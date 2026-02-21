@@ -21,8 +21,11 @@ export default function CategoryBrowseNav({ onNavigate, onExit }: CategoryBrowse
 
   return (
     <div
-      className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg px-4 mb-2"
-      style={{ fontFamily: 'var(--font-exo2), system-ui, sans-serif' }}
+      className="fixed left-1/2 -translate-x-1/2 z-40 w-full max-w-lg px-4"
+      style={{
+        fontFamily: 'var(--font-exo2), system-ui, sans-serif',
+        bottom: 'max(56px, calc(56px + env(safe-area-inset-bottom, 0px)))',
+      }}
     >
       <div
         className="relative overflow-hidden rounded-xl"
