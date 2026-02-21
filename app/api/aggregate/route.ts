@@ -57,12 +57,12 @@ const RSS_FEEDS = [
   { url: 'https://feeds.arstechnica.com/arstechnica/index', name: 'Ars Technica', maxItems: 15 },
   // Latin America
   { url: 'https://rss.nytimes.com/services/xml/rss/nyt/Americas.xml', name: 'NY Times Americas', maxItems: 20 },
-  // Reuters (global wire service)
-  { url: 'https://feeds.reuters.com/reuters/topNews', name: 'Reuters', maxItems: 35 },
-  { url: 'https://feeds.reuters.com/reuters/worldNews', name: 'Reuters World', maxItems: 30 },
+  // Wire services
+  { url: 'https://feeds.washingtonpost.com/rss/world', name: 'Washington Post World', maxItems: 30 },
+  { url: 'https://feeds.washingtonpost.com/rss/national', name: 'Washington Post US', maxItems: 25 },
   // Asia-Pacific
   { url: 'https://www.scmp.com/rss/91/feed', name: 'SCMP Asia', maxItems: 25 },
-  { url: 'https://www3.nhk.or.jp/nhkworld/en/news/feeds/', name: 'NHK World English', maxItems: 20 },
+  { url: 'https://asia.nikkei.com/rss', name: 'Nikkei Asia', maxItems: 20 },
   // Europe (non-English origin)
   { url: 'https://rss.dw.com/rdf/rss-en-all', name: 'DW News', maxItems: 25 },
   { url: 'https://www.france24.com/en/rss', name: 'France 24', maxItems: 25 },
@@ -73,15 +73,15 @@ const RSS_FEEDS = [
   { url: 'https://www.premiumtimesng.com/feed', name: 'Premium Times NG', maxItems: 20 },
   // South America
   { url: 'https://www.batimes.com.ar/feed', name: 'Buenos Aires Times', maxItems: 20 },
-  { url: 'https://www.telesurenglish.net/rss/news.xml', name: 'TeleSUR English', maxItems: 20 },
+  { url: 'https://riotimesonline.com/feed/', name: 'Rio Times', maxItems: 20 },
   { url: 'https://brazilreports.com/feed/', name: 'Brazil Reports', maxItems: 15 },
   // Asia - North (East Asia)
   { url: 'https://en.yna.co.kr/RSS/news.xml', name: 'Yonhap Korea', maxItems: 25 },
   { url: 'https://www.japantimes.co.jp/feed/', name: 'Japan Times', maxItems: 20 },
-  { url: 'https://koreajoongangdaily.joins.com/xmls/rss/ctg/ct01.xml', name: 'Korea JoongAng Daily', maxItems: 20 },
+  { url: 'https://www.straitstimes.com/news/asia/rss.xml', name: 'Straits Times Asia', maxItems: 20 },
   // Asia - Southeast
   { url: 'https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml', name: 'CNA Singapore', maxItems: 25 },
-  { url: 'https://www.bangkokpost.com/rss/data/topstories.xml', name: 'Bangkok Post', maxItems: 20 },
+  { url: 'https://www.thaipbsworld.com/feed/', name: 'Thai PBS World', maxItems: 20 },
   { url: 'https://www.rappler.com/feed/', name: 'Rappler PH', maxItems: 20 },
   // India / South Asia
   { url: 'https://timesofindia.indiatimes.com/rssfeedstopstories.cms', name: 'Times of India', maxItems: 25 },
