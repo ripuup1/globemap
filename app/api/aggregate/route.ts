@@ -62,23 +62,23 @@ const RSS_FEEDS = [
   { url: 'https://feeds.reuters.com/reuters/worldNews', name: 'Reuters World', maxItems: 30 },
   // Asia-Pacific
   { url: 'https://www.scmp.com/rss/91/feed', name: 'SCMP Asia', maxItems: 25 },
-  { url: 'https://www3.nhk.or.jp/rss/news/cat0.xml', name: 'NHK World', maxItems: 20 },
+  { url: 'https://www3.nhk.or.jp/nhkworld/en/news/feeds/', name: 'NHK World English', maxItems: 20 },
   // Europe (non-English origin)
   { url: 'https://rss.dw.com/rdf/rss-en-all', name: 'DW News', maxItems: 25 },
   { url: 'https://www.france24.com/en/rss', name: 'France 24', maxItems: 25 },
   // Africa - EXPANDED
-  { url: 'https://nation.africa/service/rss/feeds/news.rss', name: 'Nation Africa', maxItems: 20 },
+  { url: 'https://www.monitor.co.ug/rss.xml', name: 'Daily Monitor Uganda', maxItems: 20 },
   { url: 'https://allafrica.com/tools/headlines/rdf/latest/headlines.rdf', name: 'AllAfrica', maxItems: 25 },
   { url: 'https://www.dailymaverick.co.za/rss/', name: 'Daily Maverick', maxItems: 20 },
   { url: 'https://www.premiumtimesng.com/feed', name: 'Premium Times NG', maxItems: 20 },
   // South America
   { url: 'https://www.batimes.com.ar/feed', name: 'Buenos Aires Times', maxItems: 20 },
-  { url: 'https://en.mercopress.com/rss', name: 'MercoPress', maxItems: 20 },
+  { url: 'https://www.telesurenglish.net/rss/news.xml', name: 'TeleSUR English', maxItems: 20 },
   { url: 'https://brazilreports.com/feed/', name: 'Brazil Reports', maxItems: 15 },
   // Asia - North (East Asia)
   { url: 'https://en.yna.co.kr/RSS/news.xml', name: 'Yonhap Korea', maxItems: 25 },
   { url: 'https://www.japantimes.co.jp/feed/', name: 'Japan Times', maxItems: 20 },
-  { url: 'https://www.koreaherald.com/rss/030000000000.xml', name: 'Korea Herald', maxItems: 20 },
+  { url: 'https://koreajoongangdaily.joins.com/xmls/rss/ctg/ct01.xml', name: 'Korea JoongAng Daily', maxItems: 20 },
   // Asia - Southeast
   { url: 'https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml', name: 'CNA Singapore', maxItems: 25 },
   { url: 'https://www.bangkokpost.com/rss/data/topstories.xml', name: 'Bangkok Post', maxItems: 20 },
@@ -241,24 +241,34 @@ function parseRSSItem(itemXml: string): { title: string; description: string; li
     const match = xml.match(regex)
     return (match?.[1] || match?.[2] || '').trim()
   }
+  // Support Atom <link href="..."/> format
+  const getAtomLink = (xml: string): string => {
+    const altMatch = xml.match(/<link[^>]*rel=["']alternate["'][^>]*href=["']([^"']+)["']/i)
+    if (altMatch) return altMatch[1]
+    const linkMatch = xml.match(/<link[^>]*href=["']([^"']+)["'][^>]*/i)
+    return linkMatch?.[1] || ''
+  }
   const title = getTagContent(itemXml, 'title')
   if (!title) return null
   return {
     title,
-    description: getTagContent(itemXml, 'description') || getTagContent(itemXml, 'content:encoded') || '',
-    link: getTagContent(itemXml, 'link') || getTagContent(itemXml, 'guid'),
-    pubDate: getTagContent(itemXml, 'pubDate') || getTagContent(itemXml, 'dc:date') || new Date().toISOString(),
+    description: getTagContent(itemXml, 'description') || getTagContent(itemXml, 'content:encoded') || getTagContent(itemXml, 'summary') || getTagContent(itemXml, 'content') || '',
+    link: getTagContent(itemXml, 'link') || getAtomLink(itemXml) || getTagContent(itemXml, 'guid') || getTagContent(itemXml, 'id'),
+    pubDate: getTagContent(itemXml, 'pubDate') || getTagContent(itemXml, 'dc:date') || getTagContent(itemXml, 'published') || getTagContent(itemXml, 'updated') || new Date().toISOString(),
   }
 }
 
-async function fetchWithRetry(url: string, timeoutMs: number = 15000, retries: number = 1): Promise<Response> {
+async function fetchWithRetry(url: string, timeoutMs: number = 20000, retries: number = 1): Promise<Response> {
   for (let attempt = 0; attempt <= retries; attempt++) {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
     try {
       const response = await fetch(url, {
         signal: controller.signal,
-        headers: { 'User-Agent': 'VoxTerra/1.0 (news-aggregator)' },
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; VoxTerra/1.0; +https://nextjs-globe.vercel.app)',
+          'Accept': 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*',
+        },
       })
       clearTimeout(timeoutId)
       if (response.ok) return response
@@ -278,9 +288,12 @@ async function fetchRSSFeed(url: string, sourceName: string, maxItems: number = 
     if (!response.ok) return []
     const xml = await response.text()
     const events: any[] = []
+    // Support both RSS <item> and Atom <entry> formats
     const itemMatches = xml.match(/<item[\s\S]*?<\/item>/gi) || []
-    
-    for (const itemXml of itemMatches.slice(0, maxItems)) {
+    const entryMatches = xml.match(/<entry[\s\S]*?<\/entry>/gi) || []
+    const allMatches = itemMatches.length > 0 ? itemMatches : entryMatches
+
+    for (const itemXml of allMatches.slice(0, maxItems)) {
       const item = parseRSSItem(itemXml)
       if (!item) continue
       const cleanDesc = cleanHtmlDescription(item.description)
@@ -318,10 +331,15 @@ async function fetchRSSFeed(url: string, sourceName: string, maxItems: number = 
       })
     }
     return events
-  } catch {
+  } catch (err) {
+    // Return empty but track the error in sourceStats via the caller
+    feedErrors.push(`${sourceName}: ${err instanceof Error ? err.message : 'Unknown error'}`)
     return []
   }
 }
+
+// Module-level error tracking for feed diagnostics
+const feedErrors: string[] = []
 
 // ============================================================================
 // USGS EARTHQUAKES - Expanded
@@ -400,6 +418,7 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now()
   const errors: string[] = []
   const sourceStats: Record<string, number> = {}
+  feedErrors.length = 0 // Clear per-request
 
   try {
     const supabase = createServerClient()
@@ -511,6 +530,8 @@ export async function POST(request: NextRequest) {
         },
         durationMs,
         errors: errors.length,
+        feedErrors: feedErrors.length > 0 ? feedErrors : undefined,
+        dbErrors: errors.length > 0 ? errors : undefined,
       },
     })
   } catch (error) {
