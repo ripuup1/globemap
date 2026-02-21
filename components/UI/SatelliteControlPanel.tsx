@@ -13,6 +13,9 @@ import { EventType } from '@/types/event'
 import { FilterState } from '../Globe/Globe'
 import { Event } from '@/types/event'
 import ISSSatellite from './ISSSatellite'
+import { usePushNotifications } from '@/hooks/usePushNotifications'
+import { useAuth } from '@/hooks/useAuth'
+import { useAppStore } from '@/store/useAppStore'
 import { getCategoryColor, ICON_CATEGORIES } from '../Globe/markerIcons'
 import { extractCountriesFromEvents, getCountryKey } from '@/utils/countryExtractor'
 import { calculateDistance } from '@/utils/geo'
@@ -769,11 +772,85 @@ function SatelliteControlPanel({
                 )}
               </AccordionSection>
 
+              {/* Account */}
+              <AccountSection />
+
+              {/* Notifications */}
+              <NotificationSection />
+
             </div>
           </div>
         </div>
       )}
     </>
+  )
+}
+
+function AccountSection() {
+  const { user, isAuthenticated, signOut, loading } = useAuth()
+  const setShowAuthModal = useAppStore(s => s.setShowAuthModal)
+
+  return (
+    <div className="px-4 py-3 border-t border-white/5">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <svg className="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+          <span className="text-xs text-gray-300 font-medium">Account</span>
+        </div>
+        {isAuthenticated ? (
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-gray-500 max-w-[120px] truncate">{user?.email}</span>
+            <button
+              onClick={signOut}
+              disabled={loading}
+              className="text-[10px] text-red-400 hover:text-red-300 transition-colors disabled:opacity-50"
+            >
+              Sign out
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowAuthModal(true)}
+            className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors font-medium"
+          >
+            Sign in
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function NotificationSection() {
+  const { state, loading, subscribe, unsubscribe, isSupported, isSubscribed } = usePushNotifications()
+
+  if (!isSupported) return null
+
+  return (
+    <div className="px-4 py-3 border-t border-white/5">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <svg className="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+          </svg>
+          <span className="text-xs text-gray-300 font-medium">Breaking News Alerts</span>
+        </div>
+        <button
+          onClick={isSubscribed ? unsubscribe : subscribe}
+          disabled={loading || state === 'denied'}
+          className={`relative w-10 h-5 rounded-full transition-colors ${
+            isSubscribed ? 'bg-indigo-600' : 'bg-gray-600'
+          } ${loading ? 'opacity-50' : ''} ${state === 'denied' ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`}
+        >
+          <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${isSubscribed ? 'left-[22px]' : 'left-0.5'}`} />
+        </button>
+      </div>
+      {state === 'denied' && (
+        <p className="text-[10px] text-gray-500 mt-1">Notifications blocked. Enable in browser settings.</p>
+      )}
+    </div>
   )
 }
 

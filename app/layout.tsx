@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist_Mono, Exo_2, Inter } from "next/font/google";
 import "./globals.css";
+import Providers from "@/components/Providers";
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -93,8 +94,13 @@ export default function RootLayout({
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
         
-        {/* Favicon */}
+        {/* Favicon & Icons */}
         <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+        {/* PWA Manifest */}
+        <link rel="manifest" href="/manifest.json" />
         
         {/* Structured data for Google */}
         <script
@@ -121,7 +127,7 @@ export default function RootLayout({
       <body
         className={`${geistMono.variable} ${exo2.variable} ${inter.variable} antialiased`}
       >
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

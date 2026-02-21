@@ -60,7 +60,7 @@ export const supabase: SupabaseClient<Database> = (() => {
   // Create real client with credentials
   if (!clientInstance) {
     clientInstance = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: { persistSession: false },
+      auth: { persistSession: true },
       realtime: { params: { eventsPerSecond: 10 } },
     })
   }

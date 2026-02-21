@@ -10,12 +10,16 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@capacitor/cli": "^8.1.0",
+    "@capacitor/core": "^8.1.0",
     "@supabase/supabase-js": "^2.90.0",
     "next": "16.1.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-globe.gl": "^2.37.0",
-    "three": "^0.182.0"
+    "three": "^0.182.0",
+    "web-push": "^3.6.7",
+    "zustand": "^5.0.11"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -23,8 +27,10 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/three": "^0.182.0",
+    "@types/web-push": "^3.6.4",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
+    "sharp": "^0.34.5",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

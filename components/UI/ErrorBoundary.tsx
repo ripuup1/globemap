@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react'
 import { Event } from '@/types/event'
+import { reportError } from '@/utils/errorReporter'
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -35,9 +36,10 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    this.setState({
-      error,
-      errorInfo,
+    this.setState({ error, errorInfo })
+    reportError(error, 'boundary', {
+      componentStack: errorInfo.componentStack,
+      eventId: this.props.event?.id,
     })
   }
 
