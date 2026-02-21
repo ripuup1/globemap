@@ -62,7 +62,7 @@ const RSS_FEEDS = [
   { url: 'https://feeds.washingtonpost.com/rss/national', name: 'Washington Post US', maxItems: 25 },
   // Asia-Pacific
   { url: 'https://www.scmp.com/rss/91/feed', name: 'SCMP Asia', maxItems: 25 },
-  { url: 'https://asia.nikkei.com/rss', name: 'Nikkei Asia', maxItems: 20 },
+  { url: 'https://www.abc.net.au/news/feed/2942460/rss.xml', name: 'ABC Australia', maxItems: 20 },
   // Europe (non-English origin)
   { url: 'https://rss.dw.com/rdf/rss-en-all', name: 'DW News', maxItems: 25 },
   { url: 'https://www.france24.com/en/rss', name: 'France 24', maxItems: 25 },
@@ -81,7 +81,7 @@ const RSS_FEEDS = [
   { url: 'https://www.straitstimes.com/news/asia/rss.xml', name: 'Straits Times Asia', maxItems: 20 },
   // Asia - Southeast
   { url: 'https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml', name: 'CNA Singapore', maxItems: 25 },
-  { url: 'https://www.thaipbsworld.com/feed/', name: 'Thai PBS World', maxItems: 20 },
+  { url: 'https://www.benarnews.org/english/rss/rss.xml', name: 'BenarNews SE Asia', maxItems: 20 },
   { url: 'https://www.rappler.com/feed/', name: 'Rappler PH', maxItems: 20 },
   // India / South Asia
   { url: 'https://timesofindia.indiatimes.com/rssfeedstopstories.cms', name: 'Times of India', maxItems: 25 },
@@ -469,9 +469,9 @@ export async function POST(request: NextRequest) {
       return true
     })
     
-    // Sort by weight and take top 300 (increased from 250)
+    // Sort by weight and take top 400 (increased to handle more sources)
     uniqueEvents.sort((a, b) => (b.weight_score || 0) - (a.weight_score || 0))
-    const topEvents = uniqueEvents.slice(0, 300)
+    const topEvents = uniqueEvents.slice(0, 400)
     
     // BATCH UPSERT for speed (chunks of 50)
     let storedCount = 0
