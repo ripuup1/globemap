@@ -62,7 +62,7 @@ const RSS_FEEDS = [
   { url: 'https://feeds.reuters.com/reuters/worldNews', name: 'Reuters World', maxItems: 30 },
   // Asia-Pacific
   { url: 'https://www.scmp.com/rss/91/feed', name: 'SCMP Asia', maxItems: 25 },
-  { url: 'https://www3.nhk.or.jp/nhkworld/en/news/feeds/', name: 'NHK World', maxItems: 20 },
+  { url: 'https://www3.nhk.or.jp/rss/news/cat0.xml', name: 'NHK World', maxItems: 20 },
   // Europe (non-English origin)
   { url: 'https://rss.dw.com/rdf/rss-en-all', name: 'DW News', maxItems: 25 },
   { url: 'https://www.france24.com/en/rss', name: 'France 24', maxItems: 25 },
@@ -78,7 +78,7 @@ const RSS_FEEDS = [
   // Asia - North (East Asia)
   { url: 'https://en.yna.co.kr/RSS/news.xml', name: 'Yonhap Korea', maxItems: 25 },
   { url: 'https://www.japantimes.co.jp/feed/', name: 'Japan Times', maxItems: 20 },
-  { url: 'https://www.koreaherald.com/rss', name: 'Korea Herald', maxItems: 20 },
+  { url: 'https://www.koreaherald.com/rss/030000000000.xml', name: 'Korea Herald', maxItems: 20 },
   // Asia - Southeast
   { url: 'https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml', name: 'CNA Singapore', maxItems: 25 },
   { url: 'https://www.bangkokpost.com/rss/data/topstories.xml', name: 'Bangkok Post', maxItems: 20 },
