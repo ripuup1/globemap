@@ -8,6 +8,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import VoxTerraLogo from './VoxTerraLogo'
 
 const GLOBAL_FACTS = [
   "Over half the world's population now lives in urban areas.",
@@ -140,13 +141,8 @@ export default function WorldAlignLoader({ isVisible, progress }: WorldAlignLoad
             />
           </div>
         </div>
-        <div className="text-center" style={{ opacity: 0.4 }}>
-          <span
-            className="text-[11px] font-medium tracking-[0.35em] text-gray-600 uppercase"
-            style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
-          >
-            Vox Terra
-          </span>
+        <div className="flex justify-center" style={{ opacity: 0.6 }}>
+          <VoxTerraLogo size="lg" showWordmark showTagline />
         </div>
       </div>
       <style>{`

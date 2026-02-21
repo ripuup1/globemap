@@ -411,7 +411,7 @@ function HomePageContent() {
       <div className="relative w-full h-screen overflow-hidden bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900">
         {/* Logo */}
         <div className="fixed left-4 z-40" style={{ top: 'max(16px, env(safe-area-inset-top, 16px))', opacity: selectedEvent ? 0.4 : 0.9, transition: 'opacity 0.3s ease' }}>
-          <VoxTerraLogo size="md" showTagline={false} />
+          <VoxTerraLogo size="md" showWordmark={false} />
         </div>
 
         {/* Trending Sidebar */}

@@ -1,11 +1,8 @@
 /**
- * Vox Terra Logo Component
- * 
- * "Voice of the Earth" - Latin branding for the global news platform
- * Features:
- * - Animated glowing orb icon
- * - Futuristic typography
- * - Subtle hover effects
+ * Vox Terra Logo Component - Radar Globe Design
+ *
+ * Radar-style wireframe globe with data points and connections.
+ * Supports size variants ('sm' | 'md' | 'lg') and optional wordmark/tagline.
  */
 
 import { memo } from 'react'
@@ -13,100 +10,115 @@ import { memo } from 'react'
 interface VoxTerraLogoProps {
   size?: 'sm' | 'md' | 'lg'
   showTagline?: boolean
+  showWordmark?: boolean
   className?: string
 }
 
-function VoxTerraLogo({ size = 'md', showTagline = false, className = '' }: VoxTerraLogoProps) {
-  const sizes = {
-    sm: { orb: 20, text: 'text-sm', tagline: 'text-[8px]' },
-    md: { orb: 28, text: 'text-lg', tagline: 'text-[10px]' },
-    lg: { orb: 40, text: 'text-2xl', tagline: 'text-xs' },
-  }
-  
-  const { orb, text, tagline } = sizes[size]
-  
+const SIZE_MAP = {
+  sm: 28,
+  md: 40,
+  lg: 64,
+}
+
+function VoxTerraLogo({ size = 'md', showWordmark = true, showTagline = false, className = '' }: VoxTerraLogoProps) {
+  const px = SIZE_MAP[size]
+  const wordmarkHeight = showWordmark ? (showTagline ? 56 : 32) : 0
+  const gap = showWordmark ? 8 : 0
+  const totalHeight = px + gap + wordmarkHeight
+  const totalWidth = showWordmark ? Math.max(px, 180) : px
+  const cx = totalWidth / 2
+  const cy = px / 2
+  const r = px * 0.367
+
   return (
-    <div className={`flex items-center gap-2 ${className}`} style={{ fontFamily: 'var(--font-exo2), system-ui, sans-serif' }}>
-      {/* Animated Glowing Orb */}
-      <div 
-        className="relative flex-shrink-0"
-        style={{ width: orb, height: orb }}
-      >
-        {/* Outer glow ring */}
-        <div 
-          className="absolute inset-0 rounded-full animate-pulse"
-          style={{
-            background: 'radial-gradient(circle, rgba(99, 102, 241, 0.4) 0%, transparent 70%)',
-            filter: 'blur(4px)',
-          }}
+    <svg
+      width={totalWidth}
+      height={totalHeight}
+      viewBox={`0 0 ${totalWidth} ${totalHeight}`}
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+    >
+      <defs>
+        <radialGradient id="vt-glow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#00D4AA" stopOpacity="0.1" />
+          <stop offset="100%" stopColor="#00D4AA" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+
+      {/* Globe Mark */}
+      <g transform={`translate(${cx - px / 2}, 0)`}>
+        {/* Glow */}
+        <circle cx={px / 2} cy={px / 2} r={r * 1.03} fill="url(#vt-glow)" />
+
+        {/* Radar rings */}
+        <circle cx={px / 2} cy={px / 2} r={r} stroke="#00D4AA" strokeWidth={px * 0.007} fill="none" opacity="0.5" />
+        <circle cx={px / 2} cy={px / 2} r={r * 0.727} stroke="#00D4AA" strokeWidth={px * 0.003} fill="none" opacity="0.18" />
+        <circle cx={px / 2} cy={px / 2} r={r * 0.485} stroke="#00D4AA" strokeWidth={px * 0.003} fill="none" opacity="0.14" />
+
+        {/* Crosshairs */}
+        <line x1={px / 2} y1={cy - r - 2} x2={px / 2} y2={cy + r + 2} stroke="#00D4AA" strokeWidth={px * 0.002} opacity="0.12" />
+        <line x1={cx - r - 2 - (cx - px / 2)} y1={px / 2} x2={cx + r + 2 - (cx - px / 2)} y2={px / 2} stroke="#00D4AA" strokeWidth={px * 0.002} opacity="0.12" />
+
+        {/* Wireframe globe */}
+        <ellipse cx={px / 2} cy={px / 2} rx={r * 0.5} ry={r} stroke="#d0d0d8" strokeWidth={px * 0.005} fill="none" opacity="0.35" />
+        <ellipse cx={px / 2} cy={px / 2} rx={r * 0.788} ry={r} stroke="#d0d0d8" strokeWidth={px * 0.003} fill="none" opacity="0.2" />
+        <ellipse cx={px / 2} cy={px / 2} rx={r} ry={r * 0.333} stroke="#d0d0d8" strokeWidth={px * 0.003} fill="none" opacity="0.2" />
+
+        {/* Sweep line */}
+        <line
+          x1={px / 2} y1={px / 2}
+          x2={px / 2} y2={cy - r + 2}
+          stroke="#00D4AA" strokeWidth={px * 0.008} opacity="0.7" strokeLinecap="round"
         />
-        
-        {/* Earth orb */}
-        <div 
-          className="absolute inset-1 rounded-full overflow-hidden"
-          style={{
-            background: 'linear-gradient(135deg, #1e3a5f 0%, #0c1929 50%, #1a365d 100%)',
-            boxShadow: 'inset -2px -2px 6px rgba(0,0,0,0.5), inset 2px 2px 6px rgba(99, 102, 241, 0.3), 0 0 12px rgba(99, 102, 241, 0.4)',
-          }}
-        >
-          {/* Continent hints */}
-          <div 
-            className="absolute inset-0"
-            style={{
-              background: `
-                radial-gradient(ellipse 40% 30% at 30% 40%, rgba(34, 197, 94, 0.3) 0%, transparent 50%),
-                radial-gradient(ellipse 25% 40% at 70% 50%, rgba(34, 197, 94, 0.25) 0%, transparent 50%)
-              `,
-            }}
-          />
-          
-          {/* Atmosphere glow */}
-          <div 
-            className="absolute inset-0 rounded-full"
-            style={{
-              background: 'linear-gradient(135deg, rgba(147, 197, 253, 0.2) 0%, transparent 50%)',
-            }}
-          />
-        </div>
-        
-        {/* Orbital ring */}
-        <div 
-          className="absolute inset-0"
-          style={{
-            border: '1px solid rgba(99, 102, 241, 0.3)',
-            borderRadius: '50%',
-            transform: 'rotateX(70deg)',
-            animation: 'orbit-spin 8s linear infinite',
-          }}
-        />
-        
-        <style>{`
-          @keyframes orbit-spin {
-            from { transform: rotateX(70deg) rotateZ(0deg); }
-            to { transform: rotateX(70deg) rotateZ(360deg); }
-          }
-        `}</style>
-      </div>
-      
-      {/* Text */}
-      <div className="flex flex-col">
-        <span 
-          className={`${text} font-bold tracking-wider text-white`}
-          style={{
-            textShadow: '0 0 20px rgba(99, 102, 241, 0.5), 0 0 40px rgba(99, 102, 241, 0.2)',
-            letterSpacing: '0.1em',
-          }}
-        >
-          VOX<span className="text-indigo-400">TERRA</span>
-        </span>
-        
-        {showTagline && (
-          <span className={`${tagline} text-gray-500 tracking-widest uppercase`}>
-            Voice of the Earth
-          </span>
-        )}
-      </div>
-    </div>
+
+        {/* Primary data point */}
+        <circle cx={px * 0.6} cy={px * 0.356} r={px * 0.019} fill="#00D4AA" opacity="0.9" />
+        <circle cx={px * 0.6} cy={px * 0.356} r={px * 0.044} stroke="#00D4AA" strokeWidth={px * 0.003} fill="none" opacity="0.25" />
+
+        {/* Secondary data points */}
+        <circle cx={px * 0.4} cy={px * 0.444} r={px * 0.014} fill="#00D4AA" opacity="0.6" />
+        <circle cx={px * 0.639} cy={px * 0.583} r={px * 0.011} fill="#00D4AA" opacity="0.5" />
+        <circle cx={px * 0.433} cy={px * 0.639} r={px * 0.011} fill="#00D4AA" opacity="0.4" />
+
+        {/* Connections */}
+        <line x1={px * 0.6} y1={px * 0.356} x2={px * 0.4} y2={px * 0.444} stroke="#00D4AA" strokeWidth={px * 0.002} opacity="0.15" />
+        <line x1={px * 0.6} y1={px * 0.356} x2={px * 0.639} y2={px * 0.583} stroke="#00D4AA" strokeWidth={px * 0.002} opacity="0.12" />
+      </g>
+
+      {/* Wordmark */}
+      {showWordmark && (
+        <g>
+          <text
+            x={totalWidth / 2}
+            y={px + gap + 18}
+            textAnchor="middle"
+            fontFamily="'Space Mono', monospace"
+            fontWeight="700"
+            fontSize="18"
+            fill="#00D4AA"
+            letterSpacing="8"
+          >
+            VOX TERRA
+          </text>
+          {showTagline && (
+            <text
+              x={totalWidth / 2}
+              y={px + gap + 38}
+              textAnchor="middle"
+              fontFamily="'Space Mono', monospace"
+              fontWeight="400"
+              fontSize="7"
+              fill="#00D4AA"
+              letterSpacing="4"
+              opacity="0.4"
+            >
+              GLOBAL NEWS VISUALIZATION
+            </text>
+          )}
+        </g>
+      )}
+    </svg>
   )
 }
 
